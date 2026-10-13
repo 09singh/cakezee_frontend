@@ -1,0 +1,42 @@
+bakery-platform/
+│
+├── frontend/
+│   ├── public/
+│   │   ├── images/
+│   │   │   ├── categories/
+│   │   │   ├── products/
+│   │   │   └── addons/
+│   │   │
+│   │   └── logo.svg
+│   │
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── common/
+│   │   │   ├── layout/
+│   │   │   └── ui/
+│   │   │
+│   │   ├── data/
+│   │   │   ├── categories.js
+│   │   │   └── products.js
+│   │   │
+│   │   ├── features/
+│   │   │   ├── home/
+│   │   │   ├── products/
+│   │   │   ├── cart/
+│   │   │   ├── orders/
+│   │   │   ├── customer/
+│   │   │   └── admin/
+│   │   │
+│   │   ├── hooks/
+│   │   ├── routes/
+│   │   ├── services/
+│   │   ├── utils/
+│   │   ├── App.jsx
+│   │   ├── main.jsx
+│   │   └── index.css
+│   │
+│   ├── package.json
+│   ├── vite.config.js
+│   └── index.html
+│
+└── backend/
