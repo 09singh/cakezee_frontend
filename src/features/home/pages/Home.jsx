@@ -4,9 +4,9 @@ import {
   ArrowRight,
   ChevronRight,
   Heart,
-  Search,
   Sparkles,
   Star,
+  X,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { addToCart, getCart, removeCartItem } from "../../../data/cart";
@@ -21,7 +21,131 @@ import { products as fallbackProducts } from "../../../data/product/products";
 import { categories as fallbackCategories } from "../../../data/product/categories";
 import Heroimage from "../../../assets/images/chocolate-cake-hero.png";
 import CakezeeCoin from "../../../components/common/CakezeeCoin";
+
 const CREAM = "#fffaf6";
+
+// IMPORTANT: Replace this with Cakezee's real WhatsApp number.
+// Include country code 91. Do not include +, spaces or dashes.
+const WHATSAPP_NUMBER = import.meta.env.VITE_WHATSAPP_NUMBER;
+
+const WHATSAPP_MESSAGE =
+  "Hi Cakezee! I need help with an order or customer support, or I would like to customise a cake. Please help me.";
+
+function WhatsAppSupport() {
+  const [showWelcome, setShowWelcome] = useState(true);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setShowWelcome(false);
+    }, 8000);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+    WHATSAPP_MESSAGE
+  )}`;
+
+  return (
+    <div className="fixed bottom-[90px] right-4 z-[100] flex max-w-[calc(100vw-24px)] flex-col items-end gap-3 md:bottom-6 sm:right-6">
+      {/* Welcome message displayed when the website opens */}
+      {showWelcome && (
+        <div
+          role="status"
+          className="relative w-[285px] max-w-full overflow-hidden rounded-2xl border border-[#eaded6] bg-white shadow-[0_12px_40px_rgba(45,25,20,0.18)] animate-[whatsappWelcomeIn_0.35s_ease-out]"
+        >
+          <div className="flex items-start gap-3 p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#e7f8ed]">
+              <svg
+                viewBox="0 0 32 32"
+                className="h-6 w-6"
+                aria-hidden="true"
+              >
+                <path
+                  fill="#25D366"
+                  d="M16.04 3C8.87 3 3.04 8.78 3.04 15.9c0 2.28.6 4.51 1.73 6.48L3 29l6.82-1.78a13.1 13.1 0 0 0 6.22 1.57h.01c7.17 0 13-5.79 13-12.9C29.05 8.77 23.21 3 16.04 3Z"
+                />
+                <path
+                  fill="#fff"
+                  d="M23.6 19.66c-.32-.16-1.9-.93-2.2-1.03-.3-.11-.51-.16-.73.16-.22.32-.84 1.03-1.03 1.24-.19.22-.38.24-.7.08-.32-.16-1.36-.5-2.59-1.59-.96-.85-1.61-1.9-1.8-2.22-.19-.32-.02-.49.14-.65.14-.14.32-.38.48-.57.16-.19.21-.32.32-.54.1-.22.05-.4-.03-.57-.08-.16-.73-1.75-1-2.4-.26-.63-.53-.55-.73-.56h-.62c-.22 0-.57.08-.87.4-.3.33-1.14 1.11-1.14 2.7s1.17 3.13 1.33 3.35c.16.21 2.3 3.5 5.57 4.9.78.33 1.38.53 1.85.68.78.25 1.49.21 2.05.13.63-.1 1.9-.78 2.17-1.54.27-.76.27-1.41.19-1.54-.08-.14-.3-.22-.62-.38Z"
+                />
+              </svg>
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-bold text-[#392522]">
+                  Need a little help?
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => setShowWelcome(false)}
+                  aria-label="Close WhatsApp welcome message"
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[#927b70] transition hover:bg-[#f5eee9]"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              <p className="mt-1.5 text-xs leading-5 text-[#78645b]">
+                Need help with an order or want a customised cake?
+                Chat with us directly on WhatsApp!
+              </p>
+
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[#25D366] px-3.5 py-2.5 text-xs font-bold text-white transition hover:bg-[#1fb858]"
+              >
+                <svg
+                  viewBox="0 0 32 32"
+                  className="h-4 w-4"
+                  aria-hidden="true"
+                >
+                  <path
+                    fill="currentColor"
+                    d="M16.04 3C8.87 3 3.04 8.78 3.04 15.9c0 2.28.6 4.51 1.73 6.48L3 29l6.82-1.78a13.1 13.1 0 0 0 6.22 1.57h.01c7.17 0 13-5.79 13-12.9C29.05 8.77 23.21 3 16.04 3Zm0 23.6h-.01a10.8 10.8 0 0 1-5.5-1.5l-.4-.23-4.05 1.06 1.08-3.94-.26-.41a10.65 10.65 0 0 1-1.64-5.68c0-5.93 4.86-10.75 10.79-10.75 2.87 0 5.57 1.11 7.6 3.14a10.65 10.65 0 0 1 3.16 7.6c0 5.92-4.85 10.75-10.77 10.75Zm5.91-8.05c-.32-.16-1.9-.93-2.2-1.03-.3-.11-.51-.16-.73.16-.22.32-.84 1.03-1.03 1.24-.19.22-.38.24-.7.08-.32-.16-1.36-.5-2.59-1.59-.96-.85-1.61-1.9-1.8-2.22-.19-.32-.02-.49.14-.65.14-.14.32-.38.48-.57.16-.19.21-.32.32-.54.1-.22.05-.4-.03-.57-.08-.16-.73-1.75-1-2.4-.26-.63-.53-.55-.73-.56h-.62c-.22 0-.57.08-.87.4-.3.33-1.14 1.11-1.14 2.7s1.17 3.13 1.33 3.35c.16.21 2.3 3.5 5.57 4.9.78.33 1.38.53 1.85.68.78.25 1.49.21 2.05.13.63-.1 1.9-.78 2.17-1.54.27-.76.27-1.41.19-1.54-.08-.14-.3-.22-.62-.38Z"
+                  />
+                </svg>
+                Chat with us
+              </a>
+            </div>
+          </div>
+
+          <div className="h-1 w-full bg-gradient-to-r from-[#25D366] via-[#b8edc9] to-transparent" />
+        </div>
+      )}
+
+      {/* Floating WhatsApp button */}
+      <a
+        href={whatsappUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Chat with Cakezee customer support on WhatsApp"
+        title="Chat with Cakezee on WhatsApp"
+        className="group relative flex h-[58px] w-[58px] items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_8px_24px_rgba(37,211,102,0.38)] transition duration-300 hover:scale-105 hover:bg-[#1fb858] active:scale-95"
+      >
+        {/* Notification indicator */}
+        <span className="absolute right-0.5 top-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-[#ff4d4f]">
+          <span className="absolute inset-0 animate-ping rounded-full bg-[#ff4d4f] opacity-60" />
+        </span>
+
+        <svg
+          viewBox="0 0 32 32"
+          className="h-8 w-8 transition-transform duration-300 group-hover:rotate-[-8deg]"
+          aria-hidden="true"
+        >
+          <path
+            fill="currentColor"
+            d="M16.04 3C8.87 3 3.04 8.78 3.04 15.9c0 2.28.6 4.51 1.73 6.48L3 29l6.82-1.78a13.1 13.1 0 0 0 6.22 1.57h.01c7.17 0 13-5.79 13-12.9C29.05 8.77 23.21 3 16.04 3Zm0 23.6h-.01a10.8 10.8 0 0 1-5.5-1.5l-.4-.23-4.05 1.06 1.08-3.94-.26-.41a10.65 10.65 0 0 1-1.64-5.68c0-5.93 4.86-10.75 10.79-10.75 2.87 0 5.57 1.11 7.6 3.14a10.65 10.65 0 0 1 3.16 7.6c0 5.92-4.85 10.75-10.77 10.75Zm5.91-8.05c-.32-.16-1.9-.93-2.2-1.03-.3-.11-.51-.16-.73.16-.22.32-.84 1.03-1.03 1.24-.19.22-.38.24-.7.08-.32-.16-1.36-.5-2.59-1.59-.96-.85-1.61-1.9-1.8-2.22-.19-.32-.02-.49.14-.65.14-.14.32-.38.48-.57.16-.19.21-.32.32-.54.1-.22.05-.4-.03-.57-.08-.16-.73-1.75-1-2.4-.26-.63-.53-.55-.73-.56h-.62c-.22 0-.57.08-.87.4-.3.33-1.14 1.11-1.14 2.7s1.17 3.13 1.33 3.35c.16.21 2.3 3.5 5.57 4.9.78.33 1.38.53 1.85.68.78.25 1.49.21 2.05.13.63-.1 1.9-.78 2.17-1.54.27-.76.27-1.41.19-1.54-.08-.14-.3-.22-.62-.38Z"
+          />
+        </svg>
+      </a>
+    </div>
+  );
+}
 
 function getId(value) {
   if (!value) return "";
@@ -79,9 +203,7 @@ function getProductImage(product) {
 function getCategoryImage(category) {
   return (
     category?.image?.url ||
-    (typeof category?.image === "string"
-      ? category.image
-      : "") ||
+    (typeof category?.image === "string" ? category.image : "") ||
     "/images/placeholder.webp"
   );
 }
@@ -179,6 +301,7 @@ function ProductCard({ product, index = 0 }) {
   const image = getProductImage(product);
   const productId = getId(product?._id ?? product?.id);
   const cartKey = `product-heart-${productId}`;
+
   const [inCart, setInCart] = useState(() =>
     getCart().some((item) => item.key === cartKey)
   );
@@ -195,11 +318,13 @@ function ProductCard({ product, index = 0 }) {
 
     const flavour = (product?.flavours || product?.flavors || [])[0];
     const size = (product?.sizes || [])[0];
+
     const weight = size
       ? String(size.unit || "kg").toLowerCase() === "g"
         ? Number(size.value) / 1000
         : Number(size.value)
       : 0.5;
+
     const baseWeight = Number(product?.pricing?.baseWeight) || 0.5;
     const basePrice = getProductPrice(product) * (weight / baseWeight);
 
@@ -220,6 +345,7 @@ function ProductCard({ product, index = 0 }) {
       customisation: {},
       delivery: {},
     });
+
     setInCart(true);
   }
 
@@ -249,15 +375,21 @@ function ProductCard({ product, index = 0 }) {
           </span>
         )}
 
-        {product.productType !== "ready_now" && <button
-          type="button"
-          onClick={toggleCart}
-          aria-label={inCart ? `Remove ${product.name} from cart` : `Add ${product.name} to cart`}
-          aria-pressed={inCart}
-          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-[#702735] shadow-sm transition hover:bg-white"
-        >
-          <Heart size={13} fill={inCart ? "currentColor" : "none"} />
-        </button>}
+        {product.productType !== "ready_now" && (
+          <button
+            type="button"
+            onClick={toggleCart}
+            aria-label={
+              inCart
+                ? `Remove ${product.name} from cart`
+                : `Add ${product.name} to cart`
+            }
+            aria-pressed={inCart}
+            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-[#702735] shadow-sm transition hover:bg-white"
+          >
+            <Heart size={13} fill={inCart ? "currentColor" : "none"} />
+          </button>
+        )}
       </div>
 
       <div className="p-2.5 md:p-3.5">
@@ -287,7 +419,6 @@ function Home() {
 
   const [categories, setCategories] = useState(fallbackCategories);
   const [readyNowProducts, setReadyNowProducts] = useState([]);
-
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -301,20 +432,25 @@ function Home() {
 
         while (hasNextPage) {
           const response = await getReadyNowProducts({ limit: 50, page });
+
           const pageProducts = getResponseArray(response, [
             "products",
             "items",
             "results",
           ]);
+
           allProducts.push(
             ...pageProducts.filter(
               (product) =>
-                String(product.readyNowCategory || "").toLowerCase() !== "combos"
+                String(product.readyNowCategory || "").toLowerCase() !==
+                "combos"
             )
           );
+
           hasNextPage = Boolean(
             response?.pagination?.hasNext && pageProducts.length
           );
+
           page += 1;
         }
 
@@ -331,42 +467,42 @@ function Home() {
       if (cancelled) return;
 
       if (categoryResult.status === "fulfilled") {
-        const result = getResponseArray(
-          categoryResult.value,
-          ["categories", "items", "results"]
-        );
+        const result = getResponseArray(categoryResult.value, [
+          "categories",
+          "items",
+          "results",
+        ]);
 
-        if (result.length) {
-          setCategories(result);
-        }
+        if (result.length) setCategories(result);
       } else {
-        console.error(
-          "Categories API error:",
-          categoryResult.reason
-        );
+        console.error("Categories API error:", categoryResult.reason);
       }
 
       if (productResult.status === "fulfilled") {
-        const result = getResponseArray(
-          productResult.value,
-          ["products", "items", "results"]
-        );
+        const result = getResponseArray(productResult.value, [
+          "products",
+          "items",
+          "results",
+        ]);
 
-        if (result.length) {
-          setProducts(result.map(normalizeProduct));
-        }
+        if (result.length) setProducts(result.map(normalizeProduct));
       } else {
-        console.error(
-          "Products API error:",
-          productResult.reason
-        );
+        console.error("Products API error:", productResult.reason);
       }
 
       if (readyNowResult.status === "fulfilled") {
-        const result = getResponseArray(readyNowResult.value, ["products", "items", "results"]);
+        const result = getResponseArray(readyNowResult.value, [
+          "products",
+          "items",
+          "results",
+        ]);
+
         setReadyNowProducts(result.map(normalizeProduct));
       } else {
-        console.error("Ready Now products API error:", readyNowResult.reason);
+        console.error(
+          "Ready Now products API error:",
+          readyNowResult.reason
+        );
       }
     }
 
@@ -383,27 +519,86 @@ function Home() {
     if (!query) return products;
 
     return products.filter((product) =>
-      String(product.name || "")
-        .toLowerCase()
-        .includes(query)
+      String(product.name || "").toLowerCase().includes(query)
     );
   }, [products, search]);
 
   const featuredProducts = visibleProducts.slice(0, 8);
 
-  const categoryProducts = visibleProducts.slice(4, 9);
+  const occasionPriority = [
+    "birthday",
+    "kids",
+    "anniversary",
+    "wedding",
+    "engagement",
+    "baby shower",
+  ];
 
-  const shopCategories = categories.slice(0, 12);
+  const shopCategories = [...categories]
+    .sort((a, b) => {
+      const nameA = String(a.name || a.slug || "").toLowerCase();
+      const nameB = String(b.name || b.slug || "").toLowerCase();
+
+      const indexA = occasionPriority.findIndex((key) =>
+        nameA.includes(key)
+      );
+
+      const indexB = occasionPriority.findIndex((key) =>
+        nameB.includes(key)
+      );
+
+      return (
+        (indexA === -1 ? 999 : indexA) -
+        (indexB === -1 ? 999 : indexB)
+      );
+    })
+    .slice(0, 6);
+
+  const getProductSearchText = (product) =>
+    [
+      product?.name,
+      product?.category,
+      product?.categoryId?.name,
+      product?.categoryId?.slug,
+      product?.readyNowCategory,
+      product?.productType,
+      ...(Array.isArray(product?.tags) ? product.tags : []),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+  const miniDelightProducts = products
+    .filter((product) =>
+      /mini.?delight|mini cake|miniature|cupcake|bento/.test(
+        getProductSearchText(product)
+      )
+    )
+    .slice(0, 4);
+
+  const surpriseProducts = products
+    .filter((product) =>
+      /surprise|hamper|combo|gift box|cake hamper/.test(
+        getProductSearchText(product)
+      )
+    )
+    .slice(0, 4);
 
   return (
     <main
       className="min-h-screen overflow-hidden pb-8 text-[#392522]"
       style={{ backgroundColor: CREAM }}
     >
-      {/* HERO — desktop and mobile */}
-      <section className="mx-auto max-w-[1440px] px-3 pt-3 md:px-7 md:pt-5">
+      {/* Floating 3D Cakezee coin background */}
+      <div className="cakezee-floating-coin" aria-hidden="true">
+        <div className="cakezee-floating-coin-inner">
+          <CakezeeCoin />
+        </div>
+      </div>
+
+      {/* HERO — desktop */}
+      <section className="mx-auto hidden max-w-[1440px] px-3 pt-3 md:block md:px-7 md:pt-5">
         <div className="group relative isolate min-h-[235px] overflow-hidden rounded-xl bg-[#29120f] shadow-[0_12px_32px_rgba(56,22,20,0.12)] md:min-h-[350px] md:rounded-2xl lg:min-h-[405px]">
-          {/* <CakezeeCoin /> */}
           <img
             src={Heroimage}
             alt="Chocolate celebration cake by Cakezee"
@@ -436,14 +631,12 @@ function Home() {
                 Something sweet
                 <br />
                 for every{" "}
-                <span className="italic text-[#f0bca3]">
-                  moment.
-                </span>
+                <span className="italic text-[#f0bca3]">moment.</span>
               </h1>
 
               <p className="mt-3 max-w-[290px] text-[10px] leading-5 text-white/75 sm:text-xs md:mt-5 md:max-w-[360px] md:text-sm md:leading-6">
-                Handcrafted cakes, made fresh for your
-                birthdays, celebrations and sweetest memories.
+                Handcrafted cakes, made fresh for your birthdays,
+                celebrations and sweetest memories.
               </p>
 
               <div className="mt-5 flex flex-wrap gap-2 md:mt-7 md:gap-3">
@@ -451,8 +644,7 @@ function Home() {
                   to="/category/all"
                   className="inline-flex items-center gap-2 rounded-md bg-[#9b4248] px-4 py-2.5 text-[10px] font-semibold text-white transition hover:bg-[#b35559] sm:px-5 md:rounded-lg md:px-6 md:py-3 md:text-xs"
                 >
-                  Explore Cakes
-                  <ArrowRight size={14} />
+                  Explore Cakes <ArrowRight size={14} />
                 </Link>
 
                 <Link
@@ -477,84 +669,123 @@ function Home() {
         </div>
       </section>
 
-      {/* QUICK DELIVERY PROMISES — mobile */}
-      <section className="mx-auto mt-3 grid max-w-[1440px] grid-cols-2 gap-2 px-3 md:hidden">
-        <Link
-          to="/category/ready-now"
-          className="flex items-center gap-2 rounded-lg border border-[#eadbd2] bg-white px-3 py-3"
-        >
-          <span className="text-lg">⚡</span>
-          <span>
-            <span className="block text-[11px] font-semibold">
-              Ready Now
-            </span>
-            <span className="text-[9px] text-[#927b70]">
-              Fresh & ready
-            </span>
-          </span>
-        </Link>
+      {/* MOBILE QUICK ORDER OPTIONS */}
+      <section className="mx-auto mt-3 max-w-[1440px] overflow-hidden md:hidden">
+        <div className="quick-options-marquee">
+          <div className="quick-options-track">
+            {[0, 1].map((group) => (
+              <div
+                key={group}
+                className="flex shrink-0 gap-2 pr-2"
+                aria-hidden={group === 1}
+              >
+                <Link
+                  to="/category/ready-now"
+                  tabIndex={group === 1 ? -1 : 0}
+                  className="flex w-[82vw] max-w-[340px] shrink-0 items-center gap-2.5 rounded-xl border border-[#d9a15e] bg-gradient-to-br from-[#fff0d7] via-white to-[#f8dfbd] px-3 py-3 shadow-[0_4px_14px_rgba(143,76,35,0.12)]"
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-xl shadow-sm">
+                    ⚡
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[12px] font-extrabold text-[#592a20]">
+                      Ready Now
+                    </span>
+                    <span className="mt-1 block text-[10px] font-extrabold text-[#a34b24]">
+                      Delivery in 20 minutes*
+                    </span>
+                    <span className="mt-0.5 block text-[9px] text-[#886b59]">
+                      Fresh cakes, ready to go
+                    </span>
+                  </span>
+                  <ArrowRight size={15} className="shrink-0 text-[#8b4230]" />
+                </Link>
 
-        <Link
-          to="/category/all"
-          className="flex items-center gap-2 rounded-lg border border-[#eadbd2] bg-white px-3 py-3"
-        >
-          <span className="text-lg">🎂</span>
-          <span>
-            <span className="block text-[11px] font-semibold">
-              Made to Order
-            </span>
-            <span className="text-[9px] text-[#927b70]">
-              Made for your moment
-            </span>
-          </span>
-        </Link>
+                <Link
+                  to="/category/all"
+                  tabIndex={group === 1 ? -1 : 0}
+                  className="flex w-[82vw] max-w-[340px] shrink-0 items-center gap-2.5 rounded-xl border border-[#eadbd2] bg-gradient-to-br from-white to-[#f5e8df] px-3 py-3"
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-xl shadow-sm">
+                    🎂
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[12px] font-bold text-[#392522]">
+                      Made to Order
+                    </span>
+                    <span className="mt-1 block text-[10px] font-semibold text-[#702735]">
+                      Made for your moment
+                    </span>
+                    <span className="mt-0.5 block text-[9px] text-[#927b70]">
+                      Choose your favourite cake
+                    </span>
+                  </span>
+                  <ArrowRight size={15} className="shrink-0 text-[#96766b]" />
+                </Link>
+
+                <a
+                  href="YOUR_ZOMATO_SHOP_URL"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  tabIndex={group === 1 ? -1 : 0}
+                  className="flex w-[82vw] max-w-[340px] shrink-0 items-center gap-2.5 rounded-xl border border-[#f0c9c4] bg-gradient-to-br from-white to-[#fff0ed] px-3 py-3"
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e23744] text-xl text-white">
+                    🛵
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[12px] font-extrabold text-[#b92332]">
+                      Order on Zomato
+                    </span>
+                    <span className="mt-1 block text-[10px] font-semibold text-[#702735]">
+                      Order your favourites
+                    </span>
+                    <span className="mt-0.5 block text-[9px] text-[#927b70]">
+                      Browse our menu
+                    </span>
+                  </span>
+                  <ArrowRight size={15} className="shrink-0 text-[#b92332]" />
+                </a>
+
+                <a
+                  href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+                    "Hi Cakezee! I want to design my own cake. Please help me with customisation and pricing."
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  tabIndex={group === 1 ? -1 : 0}
+                  className="flex w-[82vw] max-w-[340px] shrink-0 items-center gap-2.5 rounded-xl border border-[#b9dfc1] bg-gradient-to-br from-white to-[#eaf8ed] px-3 py-3"
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#25a75a] text-xl text-white">
+                    💬
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[12px] font-extrabold text-[#176b3a]">
+                      Design Your Own Cake
+                    </span>
+                    <span className="mt-1 block text-[10px] font-semibold text-[#25804a]">
+                      Let's create something special
+                    </span>
+                    <span className="mt-0.5 block text-[9px] text-[#64856d]">
+                      Chat on WhatsApp
+                    </span>
+                  </span>
+                  <ArrowRight size={15} className="shrink-0 text-[#25804a]" />
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
-      {/* SEARCH */}
-      <section className="mx-auto mt-4 max-w-[1440px] px-3 md:mt-5 md:px-7">
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-
-            if (search.trim()) {
-              document
-                .getElementById("bestsellers")
-                ?.scrollIntoView({ behavior: "smooth" });
-            }
-          }}
-          className="flex items-center gap-2 rounded-lg border border-[#e9dcd3] bg-white px-3 py-2.5 md:mx-auto md:max-w-[440px]"
-        >
-          <Search size={15} className="shrink-0 text-[#98796d]" />
-
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search cakes, flavours and occasions..."
-            aria-label="Search cakes"
-            className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-[#a9978e]"
-          />
-
-          {search && (
-            <button
-              type="button"
-              onClick={() => setSearch("")}
-              className="text-[10px] font-semibold text-[#702735]"
-            >
-              Clear
-            </button>
-          )}
-        </form>
-      </section>
-
-      {/* SHOP BY OCCASION */}
-      <section className="mx-auto mt-6 max-w-[1440px] px-3 md:mt-8 md:px-7">
+      {/* OCCASIONS */}
+      <section className="mx-auto mt-5 max-w-[1440px] px-3 md:mt-8 md:px-7">
         <SectionHeading
           eyebrow="Find your perfect cake"
-          title="Shop by Occasion"
+          title="What are you celebrating?"
         />
 
-        <div className="flex gap-2.5 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid md:grid-cols-6 md:gap-4 lg:grid-cols-8">
+        <div className="grid grid-cols-3 gap-x-3 gap-y-4 md:grid-cols-6 md:gap-4">
           {shopCategories.map((category) => {
             const id = getId(category._id ?? category.id);
 
@@ -562,7 +793,7 @@ function Home() {
               <Link
                 key={id || category.name}
                 to={`/category/${id || "all"}`}
-                className="group w-[100px] shrink-0 text-center sm:w-[120px] md:w-auto"
+                className="group min-w-0 text-center"
               >
                 <div className="overflow-hidden rounded-lg bg-[#f1e4dc] md:rounded-xl">
                   <img
@@ -576,7 +807,7 @@ function Home() {
                       event.currentTarget.onerror = null;
                       event.currentTarget.src = "/images/placeholder.webp";
                     }}
-                    className="aspect-square w-full object-cover transition duration-500 group-hover:scale-105 md:aspect-[1.18/1]"
+                    className="aspect-square w-full object-cover transition duration-300 group-hover:scale-[1.03]"
                   />
                 </div>
 
@@ -587,22 +818,32 @@ function Home() {
             );
           })}
         </div>
+
+        <div className="mt-4 flex justify-center">
+          <Link
+            to="/category/all"
+            className="inline-flex w-full max-w-sm items-center justify-center gap-2 rounded-lg border border-[#b98b82] bg-white px-4 py-3 text-[11px] font-semibold text-[#702735] transition hover:bg-[#f8eee9] md:text-xs"
+          >
+            View More Categories <ArrowRight size={14} />
+          </Link>
+        </div>
       </section>
 
-      {/* BESTSELLER COLLECTION */}
+      {/* MOST ORDERED */}
       <section
         id="bestsellers"
         className="mx-auto mt-8 max-w-[1440px] px-3 md:mt-12 md:px-7"
       >
         <SectionHeading
           eyebrow="Loved by our customers"
-          title="Bestseller Collection"
-          // linkText="View All"
+          title="Most Ordered"
+          link="/category/all"
+          linkText="View All"
         />
 
         {featuredProducts.length > 0 ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-4 lg:gap-5">
-            {featuredProducts.map((product, index) => (
+            {featuredProducts.slice(0, 4).map((product, index) => (
               <ProductCard
                 key={getId(product._id ?? product.id) || index}
                 product={product}
@@ -611,260 +852,219 @@ function Home() {
             ))}
           </div>
         ) : (
-          <div className="rounded-xl border border-[#eaded6] bg-white px-4 py-10 text-center">
-            <p className="text-sm text-[#806a60]">
-              No cakes found. Try a different search.
-            </p>
-            {/* <button
-              type="button"
-              onClick={() => setSearch("")}
-              className="mt-3 text-xs font-semibold text-[#702735] underline"
-            >
-              Show all cakes
-            </button> */}
-          </div>
-        )}
-      </section>
-
-      {/* FIND YOUR CAKE */}
-      <section className="mx-auto mt-8 max-w-[1440px] px-3 md:mt-12 md:px-7">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <p className="mb-1 text-[9px] font-semibold uppercase tracking-[2px] text-[#a46a61]">
-              Made for your moments
-            </p>
-            <h2
-              className="text-[19px] font-semibold md:text-[25px]"
-              style={{ fontFamily: "Georgia, serif" }}
-            >
-              Find Your Cake
-            </h2>
-          </div>
-
-          <Link
-            to="/category/all"
-            className="text-[10px] font-semibold text-[#702735] md:text-xs"
-          >
-            Explore all →
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:gap-4">
-          {[
-            {
-              title: "Birthday Cakes",
-              subtitle: "Make their day special",
-              emoji: "🎂",
-              href: "/category/birthday",
-            },
-            {
-              title: "Anniversary",
-              subtitle: "Celebrate your love",
-              emoji: "❤️",
-              href: "/category/anniversary",
-            },
-            {
-              title: "Kids' Cakes",
-              subtitle: "Big smiles, sweet bites",
-              emoji: "🧸",
-              href: "/category/kids",
-            },
-            {
-              title: "Custom Cakes",
-              subtitle: "Your idea, our creation",
-              emoji: "✨",
-              href: "/category/all",
-            },
-          ].map((item) => (
-            <Link
-              key={item.title}
-              to={item.href}
-              className="flex min-w-0 items-center gap-2 rounded-xl border border-[#eadbd2] bg-white p-2.5 transition hover:border-[#b9827b] hover:shadow-sm md:gap-3 md:p-4"
-            >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#f7ece6] text-lg md:h-12 md:w-12 md:text-2xl">
-                {item.emoji}
-              </span>
-
-              <span className="min-w-0">
-                <span className="block truncate text-[10px] font-semibold md:text-xs">
-                  {item.title}
-                </span>
-                <span className="mt-1 block truncate text-[8px] text-[#927b70] md:text-[10px]">
-                  {item.subtitle}
-                </span>
-              </span>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-    
-{/* MAKE IT YOURS — premium promotional banner */}
-<section className="mx-auto mt-10 max-w-[1440px] px-3 md:mt-16 md:px-7">
-  <div className="group relative isolate overflow-hidden rounded-2xl bg-[#4e1723] shadow-[0_18px_50px_rgba(78,23,35,0.16)] md:grid md:grid-cols-[0.92fr_1.08fr] md:rounded-[28px]">
-
-    {/* Decorative background */}
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute -left-24 -top-28 h-72 w-72 rounded-full border border-[#e9c99d]/15 md:h-96 md:w-96"
-    />
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute -left-12 -top-16 h-56 w-56 rounded-full border border-[#e9c99d]/10 md:h-72 md:w-72"
-    />
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute bottom-0 left-0 h-1 w-2/3 bg-gradient-to-r from-[#e8bd91] via-[#b87962] to-transparent"
-    />
-
-    {/* Content */}
-    <div className="relative z-10 flex items-center px-6 py-9 sm:px-9 sm:py-11 md:px-9 md:py-12 lg:px-14 lg:py-16">
-      <div className="max-w-[470px]">
-
-        <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#e9c99d]/25 bg-white/[0.06] px-3 py-2 text-[9px] font-semibold uppercase tracking-[2px] text-[#f0cda7] md:text-[10px] md:tracking-[2.5px]">
-          <Sparkles size={13} />
-          Made just for you
-        </p>
-
-        <h2
-          className="max-w-[430px] text-[34px] font-medium leading-[1.08] tracking-[-1px] text-[#fff5e9] sm:text-[42px] md:text-[39px] lg:text-[52px]"
-          style={{ fontFamily: "Georgia, serif" }}
-        >
-          Every celebration
-          <br />
-          deserves a{" "}
-          <span className="italic text-[#e9bd91]">
-            little magic.
-          </span>
-        </h2>
-
-        <p className="mt-4 max-w-[360px] text-[12px] leading-6 text-[#f4dfd5]/75 sm:text-[13px] md:mt-5 md:text-sm md:leading-7">
-          Your favourite flavours. Your special message. Your
-          beautiful moment. Let us create a cake that feels
-          uniquely yours.
-        </p>
-
-        {/* Highlights */}
-        <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-[10px] text-[#f0d4c4]/90 md:mt-6 md:gap-x-5 md:text-[11px]">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#e9bd91]" />
-            Custom designs
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#e9bd91]" />
-            Personalised messages
-          </span>
-        </div>
-
-        <Link
-          to="/category/all"
-          className="group/btn mt-7 inline-flex items-center gap-3 rounded-lg bg-[#f0d0ad] px-5 py-3.5 text-[11px] font-bold text-[#4e1723] shadow-[0_6px_20px_rgba(0,0,0,0.12)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#fff0dc] hover:shadow-lg sm:px-6 md:mt-8 md:text-xs"
-        >
-          Create Your Dream Cake
-          <ArrowRight
-            size={15}
-            className="transition-transform duration-300 group-hover/btn:translate-x-1"
-          />
-        </Link>
-
-        <p className="mt-4 text-[9px] italic tracking-wide text-[#f0d4c4]/55 md:text-[10px]">
-          Crafted with love, baked for your moments.
-        </p>
-      </div>
-    </div>
-
-    {/* Image panel */}
-    <div className="relative min-h-[240px] overflow-hidden bg-[#32121b] sm:min-h-[300px] md:min-h-[390px] lg:min-h-[440px]">
-
-      <img
-        src={
-          readyNowProducts[0]
-            ? getProductImage(readyNowProducts[0])
-            : Heroimage
-        }
-        alt="Beautifully decorated celebration cake by Cakezee"
-        loading="lazy"
-        decoding="async"
-        onError={(event) => {
-          event.currentTarget.onerror = null;
-          event.currentTarget.src = Heroimage;
-        }}
-        className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-700 group-hover:scale-[1.04]"
-      />
-
-      {/* Image overlays */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#2c0d17]/70 via-transparent to-[#2c0d17]/10 md:bg-gradient-to-r md:from-[#4e1723]/35 md:via-transparent md:to-transparent" />
-
-      {/* Decorative corner accents */}
-      <div className="pointer-events-none absolute right-4 top-4 h-12 w-12 rounded-tr-2xl border-r border-t border-white/50 md:right-7 md:top-7 md:h-16 md:w-16" />
-      <div className="pointer-events-none absolute bottom-4 left-4 h-12 w-12 rounded-bl-2xl border-b border-l border-white/35 md:bottom-7 md:left-7 md:h-16 md:w-16" />
-
-      {/* Floating label */}
-      <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between gap-3 rounded-xl border border-white/20 bg-[#fffaf6]/95 p-3 shadow-[0_8px_30px_rgba(0,0,0,0.15)] backdrop-blur-md sm:bottom-6 sm:left-6 sm:right-6 sm:p-4 md:bottom-7 md:left-7 md:right-7">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f3e3d5] text-[#702735] sm:h-11 sm:w-11">
-            <Heart size={19} fill="currentColor" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[11px] font-bold text-[#54232b] sm:text-xs">
-              Baked with love
-            </p>
-            <p className="mt-1 text-[9px] text-[#8b6a60] sm:text-[10px]">
-              A little sweetness, made personal
-            </p>
-          </div>
-        </div>
-        <Sparkles size={18} className="shrink-0 text-[#b27a55]" />
-      </div>
-    </div>
-  </div>
-</section>
-
-      {/* READY NOW */}
-      <section className="mx-auto mt-8 max-w-[1440px] px-3 md:mt-12 md:px-7">
-        <SectionHeading
-          eyebrow="A little sweetness, right away"
-          title="Ready Now"
-          link="/category/ready-now"
-          linkText="See All"
-        />
-
-        {readyNowProducts.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:gap-4">
-            {readyNowProducts.map((product, index) => (
-              <ProductCard
-                key={getId(product._id ?? product.id) || index}
-                product={product}
-                index={index}
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="rounded-xl bg-white p-5 text-xs text-[#806a60]">
-            No cakes are available to display right now.
+          <p className="rounded-xl border border-[#eaded6] bg-white px-4 py-8 text-center text-sm text-[#806a60]">
+            No cakes found.
           </p>
         )}
       </section>
 
-      {/* TRENDING CAKES */}
+      {/* READY NOW */}
+      <section className="mx-auto mt-8 max-w-[1440px] px-3 md:mt-12 md:px-7">
+        <div className="rounded-2xl border border-[#e5c6a9] bg-gradient-to-r from-[#fff0df] via-[#fffaf6] to-[#f8e8df] p-3.5 md:p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="mb-1 text-[9px] font-bold uppercase tracking-[1.5px] text-[#a05b36]">
+                ⚡ Fresh & ready in ~20 minutes
+              </p>
+              <h2
+                className="text-[20px] font-semibold leading-tight text-[#39221e] md:text-[27px]"
+                style={{ fontFamily: "Georgia, serif" }}
+              >
+                Ready Now
+              </h2>
+            </div>
+
+            <Link
+              to="/category/ready-now"
+              className="inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold text-[#702735] md:text-xs"
+            >
+              See All <ChevronRight size={14} />
+            </Link>
+          </div>
+
+          {readyNowProducts.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:gap-4">
+              {readyNowProducts.slice(0, 4).map((product, index) => (
+                <ProductCard
+                  key={getId(product._id ?? product.id) || index}
+                  product={product}
+                  index={index}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-xl bg-white/80 p-4 text-xs text-[#806a60]">
+              No cakes are available to display right now.
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* MINI DELIGHTS */}
       <section className="mx-auto mt-8 max-w-[1440px] px-3 md:mt-12 md:px-7">
         <SectionHeading
-          eyebrow="Something worth sharing"
-          title="Trending Cakes"
-          // linkText="Explore More"
+          eyebrow="Little treats, big smiles"
+          title="Mini Delights"
+          link="/category/all"
+          linkText="Explore"
         />
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:gap-4">
-          {(categoryProducts.length
-            ? categoryProducts.slice(0, 4)
-            : readyNowProducts
-          ).map((product, index) => (
-            <ProductCard
-              key={getId(product._id ?? product.id) || index}
-              product={product}
-              index={index}
+        {miniDelightProducts.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:gap-4">
+            {miniDelightProducts.map((product, index) => (
+              <ProductCard
+                key={getId(product._id ?? product.id) || index}
+                product={product}
+                index={index}
+              />
+            ))}
+          </div>
+        ) : (
+          <Link
+            to="/category/all"
+            className="flex items-center justify-between rounded-xl border border-[#eaded6] bg-white p-4 text-xs text-[#702735]"
+          >
+            Explore Mini Delights <ArrowRight size={15} />
+          </Link>
+        )}
+      </section>
+
+      {/* SURPRISE CAKES & HAMPERS */}
+      <section className="mx-auto mt-8 max-w-[1440px] px-3 md:mt-12 md:px-7">
+        <SectionHeading
+          eyebrow="Make their day unexpected"
+          title="Surprise Cakes & Hampers"
+          link="/category/all"
+          linkText="Explore"
+        />
+
+        {surpriseProducts.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:gap-4">
+            {surpriseProducts.map((product, index) => (
+              <ProductCard
+                key={getId(product._id ?? product.id) || index}
+                product={product}
+                index={index}
+              />
+            ))}
+          </div>
+        ) : (
+          <Link
+            to="/category/all"
+            className="flex items-center justify-between rounded-xl border border-[#eaded6] bg-white p-4 text-xs text-[#702735]"
+          >
+            Explore Surprise Cakes & Hampers <ArrowRight size={15} />
+          </Link>
+        )}
+      </section>
+
+      {/* MAKE IT YOURS */}
+      <section className="mx-auto mt-10 max-w-[1440px] px-3 md:mt-16 md:px-7">
+        <div className="group relative isolate overflow-hidden rounded-2xl bg-[#4e1723] shadow-[0_18px_50px_rgba(78,23,35,0.16)] md:grid md:grid-cols-[0.92fr_1.08fr] md:rounded-[28px]">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -left-24 -top-28 h-72 w-72 rounded-full border border-[#e9c99d]/15 md:h-96 md:w-96"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -left-12 -top-16 h-56 w-56 rounded-full border border-[#e9c99d]/10 md:h-72 md:w-72"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute bottom-0 left-0 h-1 w-2/3 bg-gradient-to-r from-[#e8bd91] via-[#b87962] to-transparent"
+          />
+
+          <div className="relative z-10 flex items-center px-6 py-9 sm:px-9 sm:py-11 md:px-9 md:py-12 lg:px-14 lg:py-16">
+            <div className="max-w-[470px]">
+              <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#e9c99d]/25 bg-white/[0.06] px-3 py-2 text-[9px] font-semibold uppercase tracking-[2px] text-[#f0cda7] md:text-[10px] md:tracking-[2.5px]">
+                <Sparkles size={13} />
+                Made just for you
+              </p>
+
+              <h2
+                className="max-w-[430px] text-[34px] font-medium leading-[1.08] tracking-[-1px] text-[#fff5e9] sm:text-[42px] md:text-[39px] lg:text-[52px]"
+                style={{ fontFamily: "Georgia, serif" }}
+              >
+                Every celebration
+                <br />
+                deserves a{" "}
+                <span className="italic text-[#e9bd91]">
+                  little magic.
+                </span>
+              </h2>
+
+              <p className="mt-4 max-w-[360px] text-[12px] leading-6 text-[#f4dfd5]/75 sm:text-[13px] md:mt-5 md:text-sm md:leading-7">
+                Your favourite flavours. Your special message. Your beautiful
+                moment. Let us create a cake that feels uniquely yours.
+              </p>
+
+              <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-[10px] text-[#f0d4c4]/90 md:mt-6 md:gap-x-5 md:text-[11px]">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#e9bd91]" />
+                  Custom designs
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#e9bd91]" />
+                  Personalised messages
+                </span>
+              </div>
+
+              <Link
+                to="/category/all"
+                className="group/btn mt-7 inline-flex items-center gap-3 rounded-lg bg-[#f0d0ad] px-5 py-3.5 text-[11px] font-bold text-[#4e1723] shadow-[0_6px_20px_rgba(0,0,0,0.12)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#fff0dc] hover:shadow-lg sm:px-6 md:mt-8 md:text-xs"
+              >
+                Create Your Dream Cake
+                <ArrowRight
+                  size={15}
+                  className="transition-transform duration-300 group-hover/btn:translate-x-1"
+                />
+              </Link>
+
+              <p className="mt-4 text-[9px] italic tracking-wide text-[#f0d4c4]/55 md:text-[10px]">
+                Crafted with love, baked for your moments.
+              </p>
+            </div>
+          </div>
+
+          <div className="relative min-h-[240px] overflow-hidden bg-[#32121b] sm:min-h-[300px] md:min-h-[390px] lg:min-h-[440px]">
+            <img
+              src={
+                readyNowProducts[0]
+                  ? getProductImage(readyNowProducts[0])
+                  : Heroimage
+              }
+              alt="Beautifully decorated celebration cake by Cakezee"
+              loading="lazy"
+              decoding="async"
+              onError={(event) => {
+                event.currentTarget.onerror = null;
+                event.currentTarget.src = Heroimage;
+              }}
+              className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-700 group-hover:scale-[1.04]"
             />
-          ))}
+
+            <div className="absolute inset-0 bg-gradient-to-t from-[#2c0d17]/70 via-transparent to-[#2c0d17]/10 md:bg-gradient-to-r md:from-[#4e1723]/35 md:via-transparent md:to-transparent" />
+
+            <div className="pointer-events-none absolute right-4 top-4 h-12 w-12 rounded-tr-2xl border-r border-t border-white/50 md:right-7 md:top-7 md:h-16 md:w-16" />
+            <div className="pointer-events-none absolute bottom-4 left-4 h-12 w-12 rounded-bl-2xl border-b border-l border-white/35 md:bottom-7 md:left-7 md:h-16 md:w-16" />
+
+            <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between gap-3 rounded-xl border border-white/20 bg-[#fffaf6]/95 p-3 shadow-[0_8px_30px_rgba(0,0,0,0.15)] backdrop-blur-md sm:bottom-6 sm:left-6 sm:right-6 sm:p-4 md:bottom-7 md:left-7 md:right-7">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f3e3d5] text-[#702735] sm:h-11 sm:w-11">
+                  <Heart size={19} fill="currentColor" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold text-[#54232b] sm:text-xs">
+                    Baked with love
+                  </p>
+                  <p className="mt-1 text-[9px] text-[#8b6a60] sm:text-[10px]">
+                    A little sweetness, made personal
+                  </p>
+                </div>
+              </div>
+              <Sparkles size={18} className="shrink-0 text-[#b27a55]" />
+            </div>
+          </div>
         </div>
       </section>
 
@@ -915,7 +1115,6 @@ function Home() {
       <footer className="mt-8 bg-[#4e1723] text-white md:mt-12">
         <div className="mx-auto max-w-[1440px] px-5 py-8 md:px-9 md:py-10">
           <div className="grid grid-cols-2 gap-x-6 gap-y-7 md:grid-cols-4 md:gap-10">
-            {/* Brand */}
             <div className="col-span-2 md:col-span-1">
               <Link
                 to="/"
@@ -926,8 +1125,8 @@ function Home() {
               </Link>
 
               <p className="mt-3 max-w-[240px] text-[10px] leading-5 text-white/65 md:text-xs">
-                Crafted with love, baked with care. Bringing
-                a little sweetness to every special moment.
+                Crafted with love, baked with care. Bringing a little sweetness
+                to every special moment.
               </p>
 
               <div className="mt-4 flex items-center gap-2 text-[10px] text-[#efc9b7]">
@@ -936,7 +1135,6 @@ function Home() {
               </div>
             </div>
 
-            {/* Shop */}
             <div>
               <h3
                 className="text-sm font-semibold"
@@ -946,34 +1144,21 @@ function Home() {
               </h3>
 
               <div className="mt-4 space-y-3 text-[10px] text-white/65 md:text-xs">
-                <Link
-                  className="block transition hover:text-white"
-                  to="/category/all"
-                >
+                <Link className="block transition hover:text-white" to="/category/all">
                   All Cakes
                 </Link>
-                <Link
-                  className="block transition hover:text-white"
-                  to="/category/ready-now"
-                >
+                <Link className="block transition hover:text-white" to="/category/ready-now">
                   Ready Now
                 </Link>
-                <Link
-                  className="block transition hover:text-white"
-                  to="/category/birthday"
-                >
+                <Link className="block transition hover:text-white" to="/category/birthday">
                   Birthday Cakes
                 </Link>
-                <Link
-                  className="block transition hover:text-white"
-                  to="/category/anniversary"
-                >
+                <Link className="block transition hover:text-white" to="/category/anniversary">
                   Anniversary Cakes
                 </Link>
               </div>
             </div>
 
-            {/* Help */}
             <div>
               <h3
                 className="text-sm font-semibold"
@@ -983,54 +1168,27 @@ function Home() {
               </h3>
 
               <div className="mt-4 space-y-3 text-[10px] text-white/65 md:text-xs">
-                <Link
-                  className="block transition hover:text-white"
-                  to="/orders"
-                >
+                <Link className="block transition hover:text-white" to="/orders">
                   My Orders
                 </Link>
-                <Link
+                <a
                   className="block transition hover:text-white"
-                  to="/category/all"
+                  href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+                    "Hi Cakezee! I need help with customer support."
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
                   Help & Support
-                </Link>
-                <Link
-                  className="block transition hover:text-white"
-                  to="/"
-                >
+                </a>
+                <Link className="block transition hover:text-white" to="/">
                   Delivery Information
                 </Link>
-                <Link
-                  className="block transition hover:text-white"
-                  to="/"
-                >
+                <Link className="block transition hover:text-white" to="/">
                   Terms & Conditions
                 </Link>
               </div>
             </div>
-
-           {/* 
-            <div>
-              <h3
-                className="text-sm font-semibold"
-                style={{ fontFamily: "Georgia, serif" }}
-              >
-                Staff & Management
-              </h3>
-
-              <p className="mt-3 text-[10px] leading-5 text-white/60 md:text-xs">
-                Access the Cakezee staff portal.
-              </p>
-
-              <Link
-                to="/staff/login"
-                className="mt-4 inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/5 px-3 py-2.5 text-[10px] font-medium text-white/85 transition hover:bg-white/10 hover:text-white md:text-xs"
-              >
-                <ShieldCheck size={14} />
-                Staff Login
-              </Link>
-            </div>*/}
           </div>
 
           <div className="mt-7 flex flex-col items-center justify-between gap-3 border-t border-white/15 pt-5 text-center md:mt-9 md:flex-row md:text-left">
@@ -1049,6 +1207,22 @@ function Home() {
           </div>
         </div>
       </footer>
+      {/* WhatsApp support button and welcome message */}
+      <WhatsAppSupport />
+
+      {/* Welcome popup animation */}
+      <style>{`
+        @keyframes whatsappWelcomeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px) scale(0.98);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+      `}</style>
     </main>
   );
 }

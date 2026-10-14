@@ -5,6 +5,7 @@ import {
   ClipboardList,
   LayoutDashboard,
   LogOut,
+  MessageCircle,
   Menu,
   Package,
   Tag,
@@ -30,6 +31,7 @@ const adminItems = [
   { label: "Inventory", icon: Boxes, to: "/admin/inventory" },
   { label: "Customers", icon: Users, to: "/admin/customers" },
   { label: "Offers & Coupons", icon: Tag, to: "/admin/coupons" },
+  { label: "WhatsApp", icon: MessageCircle, href: "https://web.whatsapp.com/", green: true },
   // { label: "Marketing (Ads)", icon: Megaphone, badge: "8" },
   // { label: "WhatsApp Inbox", icon: MessageCircle, green: true },
   // { label: "Zomato / Swiggy", icon: UtensilsCrossed },
@@ -179,10 +181,14 @@ function StaffLayout() {
             {items.map((item) => {
               const Icon = item.icon;
               const active = isActive(item);
+              const NavigationItem = item.href ? "a" : "button";
               return (
-                <button
-                  type="button"
+                <NavigationItem
+                  type={item.href ? undefined : "button"}
                   key={item.label}
+                  href={item.href}
+                  target={item.href ? "_blank" : undefined}
+                  rel={item.href ? "noopener noreferrer" : undefined}
                   onClick={() => handleNavigation(item)}
                   aria-current={active ? "page" : undefined}
                   className={`group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] transition-all duration-150 ${
@@ -207,7 +213,7 @@ function StaffLayout() {
                       {item.badge}
                     </span>
                   )}
-                </button>
+                </NavigationItem>
               );
             })}
           </div>
@@ -259,7 +265,6 @@ function StaffLayout() {
 }
 
 export default StaffLayout;
-
 
 
 

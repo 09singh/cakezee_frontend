@@ -15,6 +15,7 @@ import {
 import { Link, useLocation } from "react-router-dom";
 import { getCart } from "../../data/cart";
 import CakezeeLogo from "../../assets/images/cakezee-logo.png.png";
+
 function Header() {
   const [cartCount, setCartCount] = useState(() =>
     getCart().reduce((count, item) => count + item.quantity, 0)
@@ -114,6 +115,7 @@ function Header() {
     className="h-auto w-[145px] object-contain sm:w-[165px] md:w-[190px] lg:w-[220px]"
     decoding="async"
   />
+            
 </Link>
 
           {/* DESKTOP NAVIGATION */}

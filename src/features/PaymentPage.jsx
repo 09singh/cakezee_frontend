@@ -1,4 +1,5 @@
-﻿import {
+﻿
+import {
   ArrowLeft,
   CheckCircle2,
   CreditCard,
@@ -23,6 +24,15 @@ import api from "../api/axios";
 import { createGuestOrder } from "../api/auth.api";
 import { saveOrderLookup } from "../data/order";
 import { removeCartItem } from "../data/cart";
+
+// Consistent Indian Rupee formatting throughout the page.
+const formatPrice = (amount) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+  }).format(Number(amount) || 0);
 
 function PaymentPage() {
   const navigate = useNavigate();
@@ -63,15 +73,16 @@ function PaymentPage() {
 
   // PRICE CALCULATION
 
-  const quantity = Number(checkout.quantity) || 1;
+  const quantity = Math.max(1, Number(checkout.quantity) || 1);
 
-  const cakePrice = Number(checkout.cakePrice || 0) * quantity;
+  const cakePrice =
+    (Number(checkout.cakePrice) || 0) * quantity;
 
   const addonsTotal =
-    checkout.addons?.reduce(
-      (total, addon) => total + Number(addon.price || 0),
+    (checkout.addons || []).reduce(
+      (sum, addon) => sum + (Number(addon.price) || 0),
       0
-    ) * quantity || 0;
+    ) * quantity;
 
   const deliveryFee =
     checkout.delivery?.method === "delivery" ? 60 : 0;
@@ -89,25 +100,48 @@ function PaymentPage() {
 
   const total = Math.max(0, subtotal - discount);
 
-  const formatPrice = (amount) =>
-    `â‚¹${Number(amount || 0).toLocaleString("en-IN")}`;
-
   // APPLY COUPON
 
   const handleApplyCoupon = async () => {
     const enteredCode = couponCode.trim().toUpperCase();
-    if (!enteredCode) { setCouponMessage("Please enter a coupon code."); setAppliedCoupon(null); return; }
+
+    if (!enteredCode) {
+      setCouponMessage("Please enter a coupon code.");
+      setAppliedCoupon(null);
+      return;
+    }
+
     setIsApplyingCoupon(true);
+    setCouponMessage("");
+
     try {
-      const response = await api.post("/coupons/validate", { code: enteredCode });
+      const response = await api.post("/coupons/validate", {
+        code: enteredCode,
+      });
+
       const coupon = response.data?.data;
-      if (!coupon?.code || coupon.discountType !== "percentage") throw new Error("Invalid or expired coupon.");
-      setAppliedCoupon(coupon); setCouponCode(coupon.code);
-      setCouponMessage(`${coupon.discountValue}% discount applied`);
+
+      if (!coupon?.code || coupon.discountType !== "percentage") {
+        throw new Error("Invalid or expired coupon.");
+      }
+
+      setAppliedCoupon(coupon);
+      setCouponCode(coupon.code);
+      setCouponMessage(
+        `${coupon.discountValue}% discount applied`
+      );
+
+      updateCheckout({ coupon });
     } catch (error) {
       setAppliedCoupon(null);
-      setCouponMessage(error.response?.data?.message || error.message || "Invalid or expired coupon.");
-    } finally { setIsApplyingCoupon(false); }
+      setCouponMessage(
+        error.response?.data?.message ||
+          error.message ||
+          "Invalid or expired coupon."
+      );
+    } finally {
+      setIsApplyingCoupon(false);
+    }
   };
 
   // REMOVE COUPON
@@ -116,6 +150,8 @@ function PaymentPage() {
     setAppliedCoupon(null);
     setCouponCode("");
     setCouponMessage("");
+
+    updateCheckout({ coupon: null });
   };
 
   // PLACE COD ORDER
@@ -123,7 +159,6 @@ function PaymentPage() {
   const handlePayment = async () => {
     if (isSubmitting) return;
 
-    // Online payment is not enabled yet.
     if (paymentMethod !== "cod") {
       setPaymentError(
         "This payment method is coming soon. Please select Cash on Delivery."
@@ -138,8 +173,7 @@ function PaymentPage() {
       const checkoutId =
         checkout.checkoutId || createCheckoutId();
 
-      // Persist the idempotency key before sending the request so a reload or
-      // network retry uses the same key instead of creating a second order.
+      // Keep the same checkout ID for safe retries.
       updateCheckout({ checkoutId });
 
       const response = await createGuestOrder({
@@ -157,12 +191,11 @@ function PaymentPage() {
         customisation: checkout.customisation || {},
         delivery: checkout.delivery,
         couponCode: appliedCoupon?.code || null,
-
-        // Only COD orders can be submitted currently.
         paymentMethod: "cod",
       });
 
-      const order = response?.success === true ? response.data : null;
+      const order =
+        response?.success === true ? response.data : null;
 
       if (!order?.orderId) {
         throw new Error(
@@ -196,12 +229,15 @@ function PaymentPage() {
 
       const responseMessage = error?.response?.data?.message;
       const validationErrors = error?.response?.data?.errors;
+
       setPaymentError(
-        (Array.isArray(validationErrors) && validationErrors.length
-          ? `${responseMessage || "Please check your order details."} ${validationErrors.join(" ")}`
-          : responseMessage) ||
-          error?.message ||
-          "We could not place your order. Please try again."
+        Array.isArray(validationErrors) && validationErrors.length
+          ? `${
+              responseMessage || "Please check your order details."
+            } ${validationErrors.join(" ")}`
+          : responseMessage ||
+              error?.message ||
+              "We could not place your order. Please try again."
       );
     } finally {
       setIsSubmitting(false);
@@ -211,7 +247,6 @@ function PaymentPage() {
   return (
     <section className="page-container py-6 md:py-10">
       <div className="mx-auto max-w-xl">
-
         {/* CHECKOUT STEPS */}
 
         <CheckoutSteps currentStep={4} />
@@ -271,7 +306,7 @@ function PaymentPage() {
             }
             className="mt-2 text-xs text-[var(--brand)] hover:underline"
           >
-            View Order Details â†“
+            View Order Details ↓
           </button>
         </div>
 
@@ -322,7 +357,7 @@ function PaymentPage() {
             />
           </button>
 
-          {/* UPI - FUTURE INTEGRATION */}
+          {/* UPI */}
 
           <div className="flex items-center gap-3 border-b border-[var(--border)] p-4 opacity-60">
             <Smartphone size={20} className="shrink-0" />
@@ -339,13 +374,15 @@ function PaymentPage() {
             </span>
           </div>
 
-          {/* CARD - FUTURE INTEGRATION */}
+          {/* CARD */}
 
           <div className="flex items-center gap-3 border-b border-[var(--border)] p-4 opacity-60">
             <CreditCard size={20} className="shrink-0" />
 
             <div className="flex-1">
-              <p className="text-sm font-medium">Credit / Debit Card</p>
+              <p className="text-sm font-medium">
+                Credit / Debit Card
+              </p>
               <p className="mt-1 text-xs text-[var(--text-muted)]">
                 Visa, Mastercard and more
               </p>
@@ -356,7 +393,7 @@ function PaymentPage() {
             </span>
           </div>
 
-          {/* NET BANKING - FUTURE INTEGRATION */}
+          {/* NET BANKING */}
 
           <div className="flex items-center gap-3 border-b border-[var(--border)] p-4 opacity-60">
             <Landmark size={20} className="shrink-0" />
@@ -373,7 +410,7 @@ function PaymentPage() {
             </span>
           </div>
 
-          {/* WALLET - FUTURE INTEGRATION */}
+          {/* WALLET */}
 
           <div className="flex items-center gap-3 p-4 opacity-60">
             <Wallet size={20} className="shrink-0" />
@@ -394,9 +431,7 @@ function PaymentPage() {
         {/* COUPON */}
 
         <div className="mt-5 rounded-xl border border-[var(--border)] bg-white p-4">
-          <p className="text-sm font-semibold">
-            Have a coupon?
-          </p>
+          <p className="text-sm font-semibold">Have a coupon?</p>
 
           <div className="mt-3 flex gap-2">
             <input
@@ -423,9 +458,9 @@ function PaymentPage() {
                 type="button"
                 onClick={handleApplyCoupon}
                 disabled={isApplyingCoupon}
-                className="rounded-lg bg-[var(--brand)] px-4 py-3 text-sm font-semibold text-white hover:bg-[var(--brand-dark)]"
+                className="rounded-lg bg-[var(--brand)] px-4 py-3 text-sm font-semibold text-white hover:bg-[var(--brand-dark)] disabled:opacity-60"
               >
-                {isApplyingCoupon ? "Checking…" : "Apply"}
+                {isApplyingCoupon ? "Checking..." : "Apply"}
               </button>
             )}
           </div>
@@ -433,9 +468,7 @@ function PaymentPage() {
           {couponMessage && (
             <p
               className={`mt-2 text-xs ${
-                appliedCoupon
-                  ? "text-green-600"
-                  : "text-red-600"
+                appliedCoupon ? "text-green-600" : "text-red-600"
               }`}
             >
               {couponMessage}
@@ -443,20 +476,18 @@ function PaymentPage() {
           )}
         </div>
 
-        {/* ORDER SUMMARY - ABOVE PLACE ORDER BUTTON */}
+        {/* ORDER SUMMARY */}
 
         <div
           id="price-details"
           className="mt-5 rounded-xl border border-[var(--border)] bg-white p-4"
         >
-          <h2 className="text-sm font-semibold">
-            Order Summary
-          </h2>
+          <h2 className="text-sm font-semibold">Order Summary</h2>
 
           <div className="mt-4 space-y-3 text-sm">
             <div className="flex justify-between gap-4">
               <span className="text-[var(--text-muted)]">
-                Cake Ã— {quantity}
+                Cake × {quantity}
               </span>
 
               <span>{formatPrice(cakePrice)}</span>
@@ -478,17 +509,13 @@ function PaymentPage() {
               </span>
 
               <span>
-                {deliveryFee === 0
-                  ? "Free"
-                  : formatPrice(deliveryFee)}
+                {deliveryFee === 0 ? "Free" : formatPrice(deliveryFee)}
               </span>
             </div>
 
             {discount > 0 && (
               <div className="flex justify-between gap-4 text-green-600">
-                <span>
-                  Coupon ({appliedCoupon.code})
-                </span>
+                <span>Coupon ({appliedCoupon.code})</span>
 
                 <span>-{formatPrice(discount)}</span>
               </div>
@@ -517,7 +544,7 @@ function PaymentPage() {
           </p>
         )}
 
-        {/* PLACE ORDER - AT THE BOTTOM */}
+        {/* PLACE ORDER */}
 
         <button
           type="button"
@@ -529,7 +556,7 @@ function PaymentPage() {
 
           {isSubmitting
             ? "Placing order..."
-            : `Place COD Order Â· ${formatPrice(total)}`}
+            : `Place COD Order · ${formatPrice(total)}`}
         </button>
 
         <p className="mt-3 text-center text-xs text-[var(--text-muted)]">
@@ -542,4 +569,3 @@ function PaymentPage() {
 }
 
 export default PaymentPage;
-

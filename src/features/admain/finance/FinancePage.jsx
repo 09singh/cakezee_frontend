@@ -52,6 +52,30 @@ function getReconciliationTotals(items, reportedTotals = {}) {
   const hasReportedTotals = ["total", "upi", "cash", "other", "driver"]
     .every((key) => Number.isFinite(Number(reportedTotals[key])));
 
+  if (transactions.length) {
+    return transactions.reduce(
+      (totals, item) => {
+        const amount = Number(item.amount) || 0;
+        const mode = String(item.mode || "").trim().toLowerCase();
+        totals.total += amount;
+
+        if (["cash", "cod"].includes(mode)) {
+          totals.cash += amount;
+          if (/driver|delivery/i.test(String(item.receivedBy || ""))) {
+            totals.driver += amount;
+          }
+        } else if (mode === "upi") {
+          totals.upi += amount;
+        } else {
+          totals.other += amount;
+        }
+
+        return totals;
+      },
+      { total: 0, upi: 0, cash: 0, other: 0, driver: 0 }
+    );
+  }
+
   if (hasReportedTotals) {
     return {
       total: Number(reportedTotals.total) || 0,
@@ -62,27 +86,31 @@ function getReconciliationTotals(items, reportedTotals = {}) {
     };
   }
 
-  return transactions.reduce(
-    (totals, item) => {
-      const amount = Number(item.amount) || 0;
-      const mode = String(item.mode || "").trim().toLowerCase();
-      totals.total += amount;
+  return { total: 0, upi: 0, cash: 0, other: 0, driver: 0 };
+}
 
-      if (["cash", "cod"].includes(mode)) {
-        totals.cash += amount;
-        if (/driver|delivery/i.test(String(item.receivedBy || ""))) {
-          totals.driver += amount;
-        }
-      } else if (mode === "upi") {
-        totals.upi += amount;
-      } else {
-        totals.other += amount;
-      }
+function matchesReconciliationMode(item, mode) {
+  const normalizedMode = String(item?.mode || item?.method || "")
+    .trim()
+    .toLowerCase();
 
-      return totals;
-    },
-    { total: 0, upi: 0, cash: 0, other: 0, driver: 0 }
-  );
+  if (mode === "all") return true;
+  if (mode === "cash") return ["cash", "cod"].includes(normalizedMode);
+  if (mode === "cod") return normalizedMode === "cod";
+  if (mode === "upi") return normalizedMode === "upi";
+  if (mode === "other") return !["cash", "cod", "upi"].includes(normalizedMode);
+
+  return true;
+}
+
+function matchesReconciliationType(item, type) {
+  if (type === "all") return true;
+
+  const normalizedType = String(item?.type || item?.channel || "")
+    .trim()
+    .toLowerCase();
+
+  return normalizedType === type.toLowerCase();
 }
 
 const dateLabel = (value) =>
@@ -398,20 +426,22 @@ function FinancePage() {
         ? data.reconciliation.items
         : []
       ).filter((item) => {
+        const matchesType = matchesReconciliationType(item, filters.type);
+        const matchesMode = matchesReconciliationMode(item, filters.mode);
         const text =
           `${item.orderId} ${item.customerName} ${item.phone} ${item.receivedBy}`.toLowerCase();
 
-        return text.includes(search.toLowerCase());
+        return matchesType && matchesMode && text.includes(search.toLowerCase());
       }),
-    [data.reconciliation.items, search]
+    [data.reconciliation.items, filters.mode, filters.type, search]
   );
   const reconciliationTotals = useMemo(
     () =>
       getReconciliationTotals(
-        data.reconciliation.items,
+        reconciliationItems,
         data.reconciliation.totals
       ),
-    [data.reconciliation.items, data.reconciliation.totals]
+    [reconciliationItems, data.reconciliation.totals]
   );
 
   const refresh = () => load(filters);
