@@ -8,6 +8,7 @@ import {
 import MainLayout from "./components/layout/MainLayout";
 import StaffLayout from "./components/layout/StaffLayout";
 import PageLoader from "./components/common/PageLoader.jsx";
+import GoogleAnalytics from "./analytics/GoogleAnalytics.jsx";
 
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import RoleRoute from "./components/auth/RoleRoute";
@@ -112,6 +113,9 @@ const InventoryPage = lazy(() =>
 );
 const FinancePage = lazy(() =>
   import("./features/admain/finance/FinancePage.jsx")
+);
+const AnalyticsPage = lazy(() =>
+  import("./features/admain/analytics/AnalyticsPage.jsx")
 );
 const CouponsPage = lazy(() =>
   import("./features/admain/coupons/CouponsPage.jsx")
@@ -220,6 +224,7 @@ function UnauthorizedPage() {
 function App() {
   return (
     <Suspense fallback={<PageLoader />}>
+      <GoogleAnalytics />
       <Routes>
         {/* ========================================================= */}
         {/* CUSTOMER / PUBLIC WEBSITE                                */}
@@ -354,6 +359,7 @@ function App() {
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/orders" element={<OrdersDashboard />} />
               <Route path="/admin/finance" element={<FinancePage />} />
+              <Route path="/admin/analytics" element={<AnalyticsPage />} />
               <Route path="/admin/customers" element={<CustomersDashboard />} />
               <Route path="/admin/inventory" element={<InventoryPage />} />
               <Route path="/admin/coupons" element={<CouponsPage />} />
@@ -432,7 +438,6 @@ function App() {
 }
 
 export default App;
-
 
 
 

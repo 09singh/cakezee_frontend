@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from "react";
 import {
   Boxes,
+  BarChart3,
   ChefHat,
   ClipboardList,
   LayoutDashboard,
@@ -24,6 +25,7 @@ const adminItems = [
   { label: "Dashboard", icon: LayoutDashboard, to: "/admin" },
   { label: "Orders", icon: ClipboardList, to: "/admin/orders" },
   { label: "Finance", icon: Wallet, to: "/admin/finance" },
+  { label: "Analytics", icon: BarChart3, to: "/admin/analytics" },
   { label: "Kitchen", icon: ChefHat, to: "/admin/kitchen" },
   { label: "Delivery", icon: Truck, to: "/admin/delivery" },
   { label: "Products", icon: Package, to: "/admin/products" },
@@ -125,7 +127,11 @@ function StaffLayout() {
     }
     if (isAdmin && item.to === "/admin/finance") {
       return location.pathname.startsWith("/admin/finance");
-    }    if (isAdmin && item.to === "/admin/orders") {
+    }
+    if (isAdmin && item.to === "/admin/analytics") {
+      return location.pathname.startsWith("/admin/analytics");
+    }
+    if (isAdmin && item.to === "/admin/orders") {
       return location.pathname.startsWith("/admin/orders");
     }
     if (isAdmin && item.to === "/admin/inventory") {
@@ -265,6 +271,5 @@ function StaffLayout() {
 }
 
 export default StaffLayout;
-
 
 
