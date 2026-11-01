@@ -16,6 +16,7 @@ import {
   updateCheckout,
 } from "../utils/checkoutStorage";
 import EmailOtpVerification from "../components/auth/EmailOtpVerification";
+import useAuth from "../hooks/useAuth";
 
 const OPENING_HOUR = 10;
 const CLOSING_HOUR = 20;
@@ -101,6 +102,7 @@ function generateTimeSlots(selectedDate) {
 
 function DeliveryPage() {
   const navigate = useNavigate();
+  const { user, isCustomerAuthenticated, loading: authLoading } = useAuth();
   const checkout = getCheckout();
 
   const [method, setMethod] = useState(
@@ -120,11 +122,11 @@ function DeliveryPage() {
   );
 
   const [phone, setPhone] = useState(
-    checkout?.delivery?.phone || ""
+    checkout?.delivery?.phone || user?.phone || ""
   );
 
   const [email, setEmail] = useState(
-    checkout?.delivery?.email || checkout?.emailVerification?.email || ""
+    checkout?.delivery?.email || checkout?.emailVerification?.email || user?.email || ""
   );
   const [checkoutId] = useState(
     () => checkout?.checkoutId || createCheckoutId()
@@ -187,8 +189,10 @@ function DeliveryPage() {
 
   const today = getLocalDateString();
   const timeSlots = generateTimeSlots(date);
-  const normalizedEmail = email.trim().toLowerCase();
-  const isEmailVerified = Boolean(
+  const normalizedEmail = isCustomerAuthenticated
+    ? user.email
+    : email.trim().toLowerCase();
+  const isEmailVerified = isCustomerAuthenticated || Boolean(
     emailVerification?.email === normalizedEmail &&
     emailVerification?.token &&
     expiredEmailToken !== emailVerification.token
@@ -228,7 +232,8 @@ function DeliveryPage() {
   };
 
   const handleContinue = () => {
-    const normalizedPhone = phone.trim();
+    if (authLoading) return;
+    const normalizedPhone = (phone || (isCustomerAuthenticated ? user.phone : "") || "").trim();
     const phoneDigits = normalizedPhone.replace(/\D/g, "");
 
     if (
@@ -240,7 +245,7 @@ function DeliveryPage() {
       return;
     }
 
-    if (!isEmailVerified) {
+    if (!isCustomerAuthenticated && !isEmailVerified) {
       alert("Please verify your email address before continuing.");
       return;
     }
@@ -277,7 +282,7 @@ function DeliveryPage() {
 
     updateCheckout({
       checkoutId,
-      emailVerification,
+      emailVerification: isCustomerAuthenticated ? null : emailVerification,
       delivery: {
         method,
         date,
@@ -337,7 +342,7 @@ function DeliveryPage() {
           <input
             id="order-phone"
             type="tel"
-            value={phone}
+            value={phone || (isCustomerAuthenticated ? user.phone || "" : "")}
             onChange={(event) => {
               setPhone(event.target.value);
               persistDelivery({ phone: event.target.value });
@@ -352,41 +357,52 @@ function DeliveryPage() {
           </p>
         </div>
 
-        <EmailOtpVerification
-          className="mt-5"
-          email={email}
-          checkoutId={checkoutId}
-          verification={emailVerification}
-          requestPending={otpRequested}
-          resendAvailableAt={resendAvailableAt}
-          onEmailChange={(value) => {
-            setEmail(value);
-            setEmailVerification(null);
-            persistDelivery({ email: value });
-            updateCheckout({ emailVerification: null, emailOtpRequested: false, emailOtpResendAt: null });
-          }}
-          onVerificationInvalidated={() => {
-            setEmailVerification(null);
-            updateCheckout({ emailVerification: null });
-          }}
-          onVerified={(value) => {
-            setEmailVerification(value);
-            updateCheckout({
-              checkoutId,
-              emailVerification: value,
-              customerEmail: value.email,
-              delivery: { ...(getCheckout()?.delivery || {}), email: value.email },
-            });
-          }}
-          onRequestPendingChange={(value) => {
-            setOtpRequested(value);
-            updateCheckout({ emailOtpRequested: value });
-          }}
-          onResendAvailableAtChange={(value) => {
-            setResendAvailableAt(value);
-            updateCheckout({ emailOtpResendAt: value });
-          }}
-        />
+        {isCustomerAuthenticated ? (
+          <div className="mt-5 rounded-lg border border-[var(--border)] bg-white p-4">
+            <p className="text-sm font-semibold">Signed in email</p>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">{user.email}</p>
+          </div>
+        ) : authLoading ? (
+          <p role="status" className="mt-5 text-sm text-[var(--text-muted)]">
+            Checking your account...
+          </p>
+        ) : (
+          <EmailOtpVerification
+            className="mt-5"
+            email={email}
+            checkoutId={checkoutId}
+            verification={emailVerification}
+            requestPending={otpRequested}
+            resendAvailableAt={resendAvailableAt}
+            onEmailChange={(value) => {
+              setEmail(value);
+              setEmailVerification(null);
+              persistDelivery({ email: value });
+              updateCheckout({ emailVerification: null, emailOtpRequested: false, emailOtpResendAt: null });
+            }}
+            onVerificationInvalidated={() => {
+              setEmailVerification(null);
+              updateCheckout({ emailVerification: null });
+            }}
+            onVerified={(value) => {
+              setEmailVerification(value);
+              updateCheckout({
+                checkoutId,
+                emailVerification: value,
+                customerEmail: value.email,
+                delivery: { ...(getCheckout()?.delivery || {}), email: value.email },
+              });
+            }}
+            onRequestPendingChange={(value) => {
+              setOtpRequested(value);
+              updateCheckout({ emailOtpRequested: value });
+            }}
+            onResendAvailableAtChange={(value) => {
+              setResendAvailableAt(value);
+              updateCheckout({ emailOtpResendAt: value });
+            }}
+          />
+        )}
 
         {/* Delivery / Pickup */}
         <div className="mt-6 grid grid-cols-2 gap-3">
@@ -601,7 +617,7 @@ function DeliveryPage() {
         <button
           type="button"
           onClick={handleContinue}
-          disabled={!isEmailVerified}
+          disabled={authLoading || (!isCustomerAuthenticated && !isEmailVerified)}
           className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--brand)] px-5 py-3.5 text-sm font-semibold text-white hover:bg-[var(--brand-dark)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           Continue · {formatINR(total)}

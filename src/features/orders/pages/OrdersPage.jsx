@@ -7,47 +7,25 @@ import {
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-import EmailOtpVerification from "../../../components/auth/EmailOtpVerification";
 import OrderDetailsCard from "../../../components/orders/OrderDetailsCard";
 import OrderProgress from "../../../components/orders/OrderProgress";
-import { getEmailCustomerOrders } from "../../../api/auth.api";
+import { getCustomerOrders } from "../../../api/auth.api";
 import { requestOrderCancellation } from "../../../api/orders.api";
-import { createCheckoutId, getEmailVerificationSession } from "../../../utils/checkoutStorage";
+import useAuth from "../../../hooks/useAuth";
 
 function OrdersPage() {
-  const [email, setEmail] = useState(() => getEmailVerificationSession()?.email || "");
-  const [checkoutId] = useState(
-    () => getEmailVerificationSession()?.checkoutId || createCheckoutId()
-  );
-  const [emailVerification, setEmailVerification] = useState(() => {
-    const saved = getEmailVerificationSession();
-    return Number(saved?.expiresAt) > Date.now() ? saved : null;
-  });
+  const { user, isCustomerAuthenticated, loading: authLoading } = useAuth();
   const [orders, setOrders] = useState([]);
   const [ordersLoadedFor, setOrdersLoadedFor] = useState("");
   const [lookupError, setLookupError] = useState("");
   const [cancellingId, setCancellingId] = useState("");
   const [editingOrder, setEditingOrder] = useState(null);
-  const [expiredEmailToken, setExpiredEmailToken] = useState("");
-  useEffect(() => {
-    if (!emailVerification?.token) return undefined;
-    const delay = Math.max(0, Number(emailVerification.expiresAt) - Date.now());
-    const timer = window.setTimeout(
-      () => setExpiredEmailToken(emailVerification.token),
-      delay
-    );
-    return () => window.clearTimeout(timer);
-  }, [emailVerification?.token, emailVerification?.expiresAt]);
-  const isAuthenticated = Boolean(
-    emailVerification?.email === email.trim().toLowerCase() &&
-    emailVerification?.token &&
-    expiredEmailToken !== emailVerification.token
-  );
+  const lookupEmail = isCustomerAuthenticated ? user.email : "";
 
   useEffect(() => {
     let cancelled = false;
 
-    if (!isAuthenticated) {
+    if (!isCustomerAuthenticated || !lookupEmail) {
       return () => {
         cancelled = true;
       };
@@ -55,18 +33,18 @@ function OrdersPage() {
 
     const refreshOrders = async () => {
       try {
-        const response = await getEmailCustomerOrders(emailVerification);
+        const response = await getCustomerOrders();
         if (cancelled) return;
         const loadedOrders = response?.data || [];
         setOrders(Array.isArray(loadedOrders) ? loadedOrders : []);
-        setOrdersLoadedFor(emailVerification.email);
+        setOrdersLoadedFor(lookupEmail);
         setLookupError("");
       } catch (error) {
         if (cancelled) return;
-        setOrdersLoadedFor(emailVerification.email);
+        setOrdersLoadedFor(lookupEmail);
         setLookupError(
           error?.response?.data?.message ||
-            "Orders linked to this email could not be loaded. Verify your email again."
+            "Orders linked to this account could not be loaded. Please sign in again."
         );
       }
     };
@@ -83,7 +61,7 @@ function OrdersPage() {
       window.clearInterval(interval);
       window.removeEventListener("focus", onFocus);
     };
-  }, [isAuthenticated, emailVerification]);
+  }, [isCustomerAuthenticated, lookupEmail]);
 
   const handleCancellation = async (order) => {
     if (cancellingId) return;
@@ -101,8 +79,8 @@ function OrdersPage() {
       const updated = await requestOrderCancellation(
         order.orderId,
         reason.trim(),
-        emailVerification,
-        emailVerification.checkoutId
+        null,
+        null
       );
 
       setOrders((items) =>
@@ -120,8 +98,8 @@ function OrdersPage() {
     }
   };
 
-  const visibleOrders = isAuthenticated && ordersLoadedFor === emailVerification?.email ? orders : [];
-  const pageLoading = isAuthenticated && ordersLoadedFor !== emailVerification?.email;
+  const visibleOrders = isCustomerAuthenticated && ordersLoadedFor === lookupEmail ? orders : [];
+  const pageLoading = authLoading || (isCustomerAuthenticated && ordersLoadedFor !== lookupEmail);
 
   if (!pageLoading && visibleOrders.length === 0) {
     return (
@@ -142,8 +120,8 @@ function OrdersPage() {
         </h1>
 
         <p className="mt-2 max-w-sm text-sm leading-6 text-[#78676A]">
-          {!isAuthenticated
-            ? "Verify your email address to view orders linked to that email."
+          {!isCustomerAuthenticated
+            ? "Sign in to your Cakezee account to view orders linked to your email."
             : "Orders placed with this verified email address will appear here."}
         </p>
         {lookupError && (
@@ -152,28 +130,14 @@ function OrdersPage() {
           </p>
         )}
 
-        <div className="mt-6 w-full max-w-sm text-left">
-          <EmailOtpVerification
-            email={email}
-            checkoutId={checkoutId}
-            verification={emailVerification}
-            onEmailChange={(value) => {
-              setEmail(value);
-              setEmailVerification(null);
-              setOrders([]);
-              setOrdersLoadedFor("");
-            }}
-            onVerificationInvalidated={() => {
-              setEmailVerification(null);
-              setOrders([]);
-              setOrdersLoadedFor("");
-            }}
-            onVerified={(value) => {
-              setEmailVerification(value);
-              setEmail(value.email);
-            }}
-          />
-        </div>
+        {!isCustomerAuthenticated && (
+          <Link
+            to="/account"
+            className="mt-6 rounded-lg bg-[#65152D] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#501023]"
+          >
+            Sign in to your account
+          </Link>
+        )}
 
         <Link
           to="/category/all"

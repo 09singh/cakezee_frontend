@@ -28,6 +28,15 @@ export const staffLogin = async (email, password) => {
   return response.data;
 };
 
+export const loginCustomerByEmail = async (verification) => {
+  const response = await api.post("/auth/email-otp/customer-session", {
+    email: verification.email,
+    checkoutId: verification.checkoutId,
+    verificationToken: verification.token,
+  });
+  return response.data;
+};
+
 /*
 |--------------------------------------------------------------------------
 | Current User
@@ -41,6 +50,29 @@ export const staffLogin = async (email, password) => {
 export const getCurrentUser = async () => {
   const response = await api.get("/auth/me");
 
+  return response.data;
+};
+
+export const getCustomerOrders = async () => {
+  const response = await api.get("/orders/me");
+  return response.data;
+};
+
+export const createCustomerOrder = async (orderData) => {
+  const response = await api.post("/orders/me", orderData, {
+    headers: orderData.checkoutId
+      ? { "Idempotency-Key": orderData.checkoutId }
+      : undefined,
+  });
+  return response.data;
+};
+
+export const createAuthenticatedSharedOrder = async (orderData) => {
+  const response = await api.post("/orders/shared-form", orderData, {
+    headers: orderData.checkoutId
+      ? { "Idempotency-Key": orderData.checkoutId }
+      : undefined,
+  });
   return response.data;
 };
 

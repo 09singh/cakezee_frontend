@@ -14,7 +14,7 @@ import {
 
 import { Link, useLocation } from "react-router-dom";
 import { getCart } from "../../data/cart";
-import CakezeeLogo from "../../assets/images/cakezee-logo.png.png";
+import CakezeeLogo from "../../assets/images/cakezee-logo-home.png";
 
 function Header() {
   const [cartCount, setCartCount] = useState(() =>
@@ -111,7 +111,7 @@ function Header() {
 >
   <img
     src={CakezeeLogo}
-    alt="Cakezee — Made for Every Celebration"
+    alt="Cakezee.in"
     className="h-auto w-[145px] object-contain sm:w-[165px] md:w-[190px] lg:w-[220px]"
     decoding="async"
   />
@@ -174,7 +174,7 @@ function Header() {
 
             {/* DESKTOP PROFILE */}
             <Link
-              to="/profile"
+              to="/account"
               aria-label="Profile"
               className="hidden h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] md:flex"
             >
@@ -270,7 +270,7 @@ function Header() {
       >
         <img
           src={CakezeeLogo}
-          alt="Cakezee — Made for Every Celebration"
+          alt="Cakezee.in"
           className="h-auto w-[210px] max-w-full object-contain object-left"
           decoding="async"
         />
@@ -363,7 +363,7 @@ function Header() {
             <div className="mb-4 border-t border-white/15" />
 
             <Link
-              to="/profile"
+              to="/account"
               tabIndex={mobileMenuOpen ? 0 : -1}
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center gap-3 rounded-xl border border-white/15 bg-white/[0.06] p-3.5 transition hover:bg-white/10"

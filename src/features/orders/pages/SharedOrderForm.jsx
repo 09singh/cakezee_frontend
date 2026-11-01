@@ -2,8 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import EmailOtpVerification from "../../../components/auth/EmailOtpVerification";
-import { createSharedOrder, getCategories, getProducts } from "../../../api/auth.api";
+import {
+  createAuthenticatedSharedOrder,
+  createSharedOrder,
+  getCategories,
+  getProducts,
+} from "../../../api/auth.api";
 import { createCheckoutId } from "../../../utils/checkoutStorage";
+import useAuth from "../../../hooks/useAuth";
 import cakezeeLogo from "../../../assets/images/cakezee-logo.png.png";
 import { calculateProductPrice } from "../../../utils/productPricing";
 
@@ -95,6 +101,7 @@ const fileAsDataUrl = (file) =>
   });
 
 function SharedOrderForm() {
+  const { user, isCustomerAuthenticated, loading: authLoading } = useAuth();
   const today = getBusinessDate();
   const initialDate = getDeliverySlots(today).length ? today : addDays(today, 1);
   const [products, setProducts] = useState([]);
@@ -102,9 +109,9 @@ function SharedOrderForm() {
   const [items, setItems] = useState([emptyItem()]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [productError, setProductError] = useState("");
-  const [customerName, setCustomerName] = useState("");
+  const [customerName, setCustomerName] = useState(user?.name || "");
   const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(user?.email || "");
   const [checkoutId] = useState(createCheckoutId);
   const [emailVerification, setEmailVerification] = useState(null);
   const [otpRequested, setOtpRequested] = useState(false);
@@ -238,11 +245,12 @@ function SharedOrderForm() {
 
   const submitOrder = async () => {
     if (submitting) return;
-    if (
+    if (authLoading) return;
+    if (!isCustomerAuthenticated && (
       !emailVerification?.token ||
       emailVerification.email !== email.trim().toLowerCase() ||
       Number(emailVerification.expiresAt) <= Date.now()
-    ) {
+    )) {
       setSubmitError("Verify your email address before placing the order.");
       return;
     }
@@ -280,12 +288,11 @@ function SharedOrderForm() {
         },
       }));
 
-      const response = await createSharedOrder({
+      const orderData = {
         checkoutId,
         phone,
-        customerEmail: emailVerification.email,
-        emailVerificationToken: emailVerification.token,
-        customerName,
+        customerEmail: isCustomerAuthenticated ? user.email : emailVerification.email,
+        customerName: customerName.trim() || user?.name || "",
         occasion: normalizedOccasion,
         items: orderItems,
         additionalNotes,
@@ -297,7 +304,13 @@ function SharedOrderForm() {
           mapLink: "",
           mapLinkText: "",
         },
-      });
+      };
+      const response = isCustomerAuthenticated
+        ? await createAuthenticatedSharedOrder(orderData)
+        : await createSharedOrder({
+          ...orderData,
+          emailVerificationToken: emailVerification.token,
+        });
       const order = response?.data;
       if (!order?.orderId) {
         throw new Error("The order service returned an invalid response.");
@@ -366,30 +379,41 @@ function SharedOrderForm() {
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <label className="text-sm font-semibold">
                 Name *
-                <input required minLength="2" maxLength="100" autoComplete="name" value={customerName} onChange={(event) => setCustomerName(event.target.value)} className={fieldClass} />
+                <input required minLength="2" maxLength="100" autoComplete="name" value={isCustomerAuthenticated ? user.name : customerName} onChange={(event) => setCustomerName(event.target.value)} readOnly={isCustomerAuthenticated} className={fieldClass} />
               </label>
               <label className="text-sm font-semibold">
                 Mobile number *
                 <input required type="tel" autoComplete="tel" placeholder="10 digits or +country code" value={phone} onChange={(event) => setPhone(event.target.value)} className={fieldClass} />
               </label>
             </div>
-            <EmailOtpVerification
-              className="mt-4"
-              email={email}
-              checkoutId={checkoutId}
-              verification={emailVerification}
-              requestPending={otpRequested}
-              resendAvailableAt={resendAvailableAt}
-              onEmailChange={(value) => {
-                setEmail(value);
-                setEmailVerification(null);
-                setOtpRequested(false);
-              }}
-              onVerificationInvalidated={() => setEmailVerification(null)}
-              onVerified={setEmailVerification}
-              onRequestPendingChange={setOtpRequested}
-              onResendAvailableAtChange={setResendAvailableAt}
-            />
+            {isCustomerAuthenticated ? (
+              <div className="mt-4 rounded-lg border border-[#ebe5de] bg-white p-3">
+                <p className="text-sm font-semibold">Signed in email</p>
+                <p className="mt-1 text-sm text-[#78676A]">{user.email}</p>
+              </div>
+            ) : authLoading ? (
+              <p role="status" className="mt-4 text-sm text-[#78676A]">
+                Checking your account...
+              </p>
+            ) : (
+              <EmailOtpVerification
+                className="mt-4"
+                email={email}
+                checkoutId={checkoutId}
+                verification={emailVerification}
+                requestPending={otpRequested}
+                resendAvailableAt={resendAvailableAt}
+                onEmailChange={(value) => {
+                  setEmail(value);
+                  setEmailVerification(null);
+                  setOtpRequested(false);
+                }}
+                onVerificationInvalidated={() => setEmailVerification(null)}
+                onVerified={setEmailVerification}
+                onRequestPendingChange={setOtpRequested}
+                onResendAvailableAtChange={setResendAvailableAt}
+              />
+            )}
           </section>
 
           <section className={panelClass}>

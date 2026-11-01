@@ -5,6 +5,11 @@ import {
   getCurrentUser,
   logout as logoutApi,
 } from "../api/auth.api";
+import {
+  clearEmailVerificationSession,
+  getCheckout,
+  saveCheckout,
+} from "../utils/checkoutStorage";
 
 const AuthContext = createContext(null);
 
@@ -20,21 +25,21 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let active = true;
-    const staffToken = localStorage.getItem("cakezee_token");
-    const restoreStaffSession = async () => {
+    const savedToken = localStorage.getItem("cakezee_token");
+    const restoreSession = async () => {
       try {
-        if (!staffToken) {
+        if (!savedToken) {
           if (active) setUser(null);
           return;
         }
         const response = await getCurrentUser();
-        if (active && response.user && response.user.role !== "customer") {
+        if (active && response.user) {
           setUser(response.user);
         } else if (active) {
           clearAuth();
         }
       } catch {
-        if (active && localStorage.getItem("cakezee_token") === staffToken) {
+        if (active && localStorage.getItem("cakezee_token") === savedToken) {
           clearAuth();
         }
       } finally {
@@ -42,7 +47,7 @@ export function AuthProvider({ children }) {
       }
     };
 
-    restoreStaffSession();
+    restoreSession();
     return () => {
       active = false;
     };
@@ -67,6 +72,26 @@ export function AuthProvider({ children }) {
     setUser(authenticatedUser);
   };
 
+  const loginCustomer = (response) => {
+    const { token, user: authenticatedUser } = response;
+    if (!token || authenticatedUser?.role !== "customer") {
+      throw new Error("Invalid customer authentication response.");
+    }
+    localStorage.setItem("cakezee_token", token);
+    localStorage.setItem("cakezee_user", JSON.stringify(authenticatedUser));
+    clearEmailVerificationSession();
+    const checkout = getCheckout();
+    if (checkout?.emailVerification) {
+      saveCheckout({
+        ...checkout,
+        emailVerification: null,
+        emailOtpRequested: false,
+        emailOtpResendAt: null,
+      });
+    }
+    setUser(authenticatedUser);
+  };
+
   const loginStaff = async (email, password) => {
     const response = await staffLoginApi(email, password);
     saveStaffAuth(response);
@@ -81,6 +106,16 @@ export function AuthProvider({ children }) {
     } catch {
       // Local session state is cleared even when the server is unavailable.
     } finally {
+      clearEmailVerificationSession();
+      const checkout = getCheckout();
+      if (checkout?.emailVerification) {
+        saveCheckout({
+          ...checkout,
+          emailVerification: null,
+          emailOtpRequested: false,
+          emailOtpResendAt: null,
+        });
+      }
       clearAuth();
     }
   };
@@ -89,8 +124,9 @@ export function AuthProvider({ children }) {
     user,
     loading,
     isAuthenticated: Boolean(user),
-    isCustomerAuthenticated: false,
+    isCustomerAuthenticated: user?.role === "customer",
     loginStaff,
+    loginCustomer,
     logoutUser,
   };
 

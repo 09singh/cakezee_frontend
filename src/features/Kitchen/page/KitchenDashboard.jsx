@@ -17,11 +17,19 @@ import {
   mapApiOrder,
 } from "../../../api/orders.api";
 
-const filters = ["All", "Pending", "Preparing", "Ready", "Cancelled"];
+const filters = ["All", "Pending", "Today", "Preparing", "Ready", "Cancelled"];
 const mapKitchenOrder = (order) => ({
   ...mapApiOrder(order),
   customer: order.customerName || "Customer",
 });
+
+const getKitchenDate = () =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 
 /* ================= KITCHEN TIME ================= */
 
@@ -172,10 +180,12 @@ function KitchenDashboard() {
 
   const filteredOrders = useMemo(() => {
     const searchText = search.trim().toLowerCase();
+    const today = getKitchenDate();
 
     return orders.filter((order) => {
-      const matchesFilter =
-        activeFilter === "All" || order.status === activeFilter;
+      const matchesFilter = activeFilter === "Today"
+        ? order.delivery?.date === today && ["Pending", "Preparing"].includes(order.status)
+        : activeFilter === "All" || order.status === activeFilter;
 
       const matchesSearch =
         String(order.id || "").toLowerCase().includes(searchText) ||
@@ -186,8 +196,12 @@ function KitchenDashboard() {
     });
   }, [orders, activeFilter, search]);
 
+  const today = getKitchenDate();
   const counts = {
-    total: orders.length,
+    today: orders.filter((order) =>
+      order.delivery?.date === today &&
+      ["Pending", "Preparing"].includes(order.status)
+    ).length,
     pending: orders.filter((order) => order.status === "Pending").length,
     preparing: orders.filter((order) => order.status === "Preparing").length,
     ready: orders.filter((order) => order.status === "Ready").length,
@@ -263,7 +277,7 @@ function KitchenDashboard() {
       <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <KitchenStat
           title="Today's Orders"
-          value={counts.total}
+          value={counts.today}
           icon={<ChefHat size={18} />}
         />
 

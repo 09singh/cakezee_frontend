@@ -21,8 +21,12 @@ import {
 } from "../utils/checkoutStorage";
 
 import api from "../api/axios";
-import { createEmailVerifiedOrder } from "../api/auth.api";
+import {
+  createCustomerOrder,
+  createEmailVerifiedOrder,
+} from "../api/auth.api";
 import { removeCartItem } from "../data/cart";
+import useAuth from "../hooks/useAuth";
 
 // Consistent Indian Rupee formatting throughout the page.
 const formatPrice = (amount) =>
@@ -35,6 +39,7 @@ const formatPrice = (amount) =>
 
 function PaymentPage() {
   const navigate = useNavigate();
+  const { user, isCustomerAuthenticated, loading: authLoading } = useAuth();
   const checkout = getCheckout();
   const [paymentMethod, setPaymentMethod] = useState("cod");
 
@@ -109,7 +114,7 @@ function PaymentPage() {
       : 0;
 
   const total = Math.max(0, subtotal - discount);
-  const isEmailVerified = Boolean(
+  const isEmailVerified = isCustomerAuthenticated || Boolean(
     emailVerification?.email === checkout.delivery?.email?.trim().toLowerCase() &&
     emailVerification?.token &&
     expiredEmailToken !== emailVerification.token
@@ -172,7 +177,7 @@ function PaymentPage() {
   // PLACE COD ORDER
 
   const placeOrder = async () => {
-    if (isSubmitting) return;
+    if (isSubmitting || authLoading) return;
 
     if (paymentMethod !== "cod") {
       setPaymentError(
@@ -181,7 +186,7 @@ function PaymentPage() {
       return;
     }
 
-    if (!isEmailVerified) {
+    if (!isCustomerAuthenticated && !isEmailVerified) {
       setPaymentError("Email verification has expired. Return to the Delivery page and verify your email again.");
       return;
     }
@@ -196,10 +201,13 @@ function PaymentPage() {
       // Keep the same checkout ID for safe retries.
       updateCheckout({ checkoutId });
 
-      const response = await createEmailVerifiedOrder({
+      const orderData = {
         checkoutId,
-        customerEmail: emailVerification.email,
-        emailVerificationToken: emailVerification.token,
+        customerEmail: isCustomerAuthenticated ? user.email : emailVerification.email,
+        ...(isCustomerAuthenticated ? {} : {
+          emailVerificationToken: emailVerification.token,
+        }),
+        customerName: isCustomerAuthenticated ? user.name : undefined,
         phone: checkout.delivery?.phone || "",
         productId: checkout.productId,
         size: checkout.size,
@@ -214,7 +222,10 @@ function PaymentPage() {
         delivery: checkout.delivery,
         couponCode: appliedCoupon?.code || null,
         paymentMethod: "cod",
-      });
+      };
+      const response = isCustomerAuthenticated
+        ? await createCustomerOrder(orderData)
+        : await createEmailVerifiedOrder(orderData);
 
       const order =
         response?.success === true ? response.data : null;
@@ -568,7 +579,7 @@ function PaymentPage() {
         <button
           type="button"
           onClick={handlePayment}
-          disabled={isSubmitting}
+          disabled={isSubmitting || authLoading}
           className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--brand)] px-5 py-4 text-sm font-semibold text-white transition hover:bg-[var(--brand-dark)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Lock size={16} />

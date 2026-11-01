@@ -20,7 +20,6 @@ import {
 import { products as fallbackProducts } from "../../../data/product/products";
 import { categories as fallbackCategories } from "../../../data/product/categories";
 import Heroimage from "../../../assets/images/chocolate-cake-hero.png";
-import CakezeeCoin from "../../../components/common/CakezeeCoin";
 
 const CREAM = "#fffaf6";
 
@@ -576,13 +575,6 @@ function Home() {
       className="min-h-screen overflow-hidden pb-8 text-[#392522]"
       style={{ backgroundColor: CREAM }}
     >
-      {/* Floating 3D Cakezee coin background */}
-      <div className="cakezee-floating-coin" aria-hidden="true">
-        <div className="cakezee-floating-coin-inner">
-          <CakezeeCoin />
-        </div>
-      </div>
-
       {/* HERO — desktop */}
       <section className="mx-auto hidden max-w-[1440px] px-3 pt-3 md:block md:px-7 md:pt-5">
         <div className="group relative isolate min-h-[235px] overflow-hidden rounded-xl bg-[#29120f] shadow-[0_12px_32px_rgba(56,22,20,0.12)] md:min-h-[350px] md:rounded-2xl lg:min-h-[405px]">
@@ -709,30 +701,6 @@ function Home() {
                   </span>
                   <ArrowRight size={15} className="shrink-0 text-[#96766b]" />
                 </Link>
-
-                <a
-                  href="YOUR_ZOMATO_SHOP_URL"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  tabIndex={group === 1 ? -1 : 0}
-                  className="flex w-[82vw] max-w-[340px] shrink-0 items-center gap-2.5 rounded-xl border border-[#f0c9c4] bg-gradient-to-br from-white to-[#fff0ed] px-3 py-3"
-                >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e23744] text-xl text-white">
-                    🛵
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[12px] font-extrabold text-[#b92332]">
-                      Order on Zomato
-                    </span>
-                    <span className="mt-1 block text-[10px] font-semibold text-[#702735]">
-                      Order your favourites
-                    </span>
-                    <span className="mt-0.5 block text-[9px] text-[#927b70]">
-                      Browse our menu
-                    </span>
-                  </span>
-                  <ArrowRight size={15} className="shrink-0 text-[#b92332]" />
-                </a>
 
                 <a
                   href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
@@ -1178,12 +1146,6 @@ function Home() {
                 >
                   Help & Support
                 </a>
-                <Link className="block transition hover:text-white" to="/">
-                  Delivery Information
-                </Link>
-                <Link className="block transition hover:text-white" to="/">
-                  Terms & Conditions
-                </Link>
               </div>
             </div>
           </div>

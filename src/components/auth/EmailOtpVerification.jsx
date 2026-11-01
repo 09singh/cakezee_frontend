@@ -119,7 +119,7 @@ function EmailOtpVerification({
         checkoutId,
       };
       saveEmailVerificationSession(verifiedEmail);
-      onVerified(verifiedEmail);
+      await onVerified?.(verifiedEmail);
       setMessage("Email verified.");
       setError("");
       setRequested(false);
