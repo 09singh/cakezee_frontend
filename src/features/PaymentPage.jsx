@@ -10,7 +10,7 @@ import {
   Wallet,
 } from "lucide-react";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import CheckoutSteps from "../components/CheckoutSteps";
@@ -21,8 +21,7 @@ import {
 } from "../utils/checkoutStorage";
 
 import api from "../api/axios";
-import { createGuestOrder } from "../api/auth.api";
-import { saveOrderLookup } from "../data/order";
+import { createEmailVerifiedOrder } from "../api/auth.api";
 import { removeCartItem } from "../data/cart";
 
 // Consistent Indian Rupee formatting throughout the page.
@@ -37,7 +36,6 @@ const formatPrice = (amount) =>
 function PaymentPage() {
   const navigate = useNavigate();
   const checkout = getCheckout();
-
   const [paymentMethod, setPaymentMethod] = useState("cod");
 
   const [couponCode, setCouponCode] = useState(
@@ -52,6 +50,18 @@ function PaymentPage() {
   const [paymentError, setPaymentError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [expiredEmailToken, setExpiredEmailToken] = useState("");
+  const emailVerification = checkout?.emailVerification;
+
+  useEffect(() => {
+    if (!emailVerification?.token) return undefined;
+    const delay = Math.max(0, Number(emailVerification.expiresAt) - Date.now());
+    const timer = window.setTimeout(
+      () => setExpiredEmailToken(emailVerification.token),
+      delay
+    );
+    return () => window.clearTimeout(timer);
+  }, [emailVerification?.token, emailVerification?.expiresAt]);
 
   if (!checkout) {
     return (
@@ -99,6 +109,11 @@ function PaymentPage() {
       : 0;
 
   const total = Math.max(0, subtotal - discount);
+  const isEmailVerified = Boolean(
+    emailVerification?.email === checkout.delivery?.email?.trim().toLowerCase() &&
+    emailVerification?.token &&
+    expiredEmailToken !== emailVerification.token
+  );
 
   // APPLY COUPON
 
@@ -156,13 +171,18 @@ function PaymentPage() {
 
   // PLACE COD ORDER
 
-  const handlePayment = async () => {
+  const placeOrder = async () => {
     if (isSubmitting) return;
 
     if (paymentMethod !== "cod") {
       setPaymentError(
         "This payment method is coming soon. Please select Cash on Delivery."
       );
+      return;
+    }
+
+    if (!isEmailVerified) {
+      setPaymentError("Email verification has expired. Return to the Delivery page and verify your email again.");
       return;
     }
 
@@ -176,8 +196,10 @@ function PaymentPage() {
       // Keep the same checkout ID for safe retries.
       updateCheckout({ checkoutId });
 
-      const response = await createGuestOrder({
+      const response = await createEmailVerifiedOrder({
         checkoutId,
+        customerEmail: emailVerification.email,
+        emailVerificationToken: emailVerification.token,
         phone: checkout.delivery?.phone || "",
         productId: checkout.productId,
         size: checkout.size,
@@ -212,13 +234,6 @@ function PaymentPage() {
         paymentStatus: "pending",
       });
 
-      if (checkout.delivery?.phone) {
-        saveOrderLookup(
-          checkout.delivery.phone,
-          order.orderId
-        );
-      }
-
       if (checkout.cartItemKey) {
         removeCartItem(checkout.cartItemKey);
       }
@@ -242,6 +257,10 @@ function PaymentPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handlePayment = () => {
+    placeOrder();
   };
 
   return (
@@ -564,6 +583,7 @@ function PaymentPage() {
           options will be available in a future update.
         </p>
       </div>
+
     </section>
   );
 }

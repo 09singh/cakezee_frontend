@@ -60,6 +60,7 @@ function AddProduct() {
     categoryId: "",
     badge: "",
     baseWeight: "0.5",
+    collection: "",
     currency: "INR",
     isActive: true,
     sortOrder: "0",
@@ -434,6 +435,10 @@ function AddProduct() {
         "Base weight must be greater than 0.";
     }
 
+    if (!["everyday_favorite", "trending_collection", "signature_collection"].includes(form.collection)) {
+      nextErrors.collection = "Please select a product collection.";
+    }
+
     const validSizes = sizes.filter(
       (size) =>
         size.name.trim() &&
@@ -538,6 +543,7 @@ function AddProduct() {
 
       pricing: {
         baseWeight: Number(form.baseWeight),
+        collection: form.collection,
         weightUnit: "kg",
         currency: form.currency,
       },
@@ -1029,7 +1035,7 @@ function AddProduct() {
                 </h2>
 
                 <p className="mt-1 text-sm text-gray-500">
-                  Set the price for each flavour at the base weight.
+                    Set the base-weight price and choose how the price increases for larger sizes.
                 </p>
               </div>
 
@@ -1051,7 +1057,28 @@ function AddProduct() {
 
             {/* BASE WEIGHT */}
 
-            <div className="mb-5 max-w-sm">
+            <div className="mb-5 grid gap-5 md:grid-cols-2">
+              <div>
+                <label className={labelClass}>
+                  Product Collection <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="collection"
+                  value={form.collection}
+                  onChange={handleChange}
+                  className={`${inputClass} ${errors.collection ? "border-red-400" : ""}`}
+                >
+                  <option value="">Select a collection</option>
+                  <option value="everyday_favorite">Everyday Favorites — +₹300 per 0.5 kg</option>
+                  <option value="trending_collection">Trending Collection — +₹400 per 0.5 kg</option>
+                  <option value="signature_collection">Signature Collection — +₹500 per 0.5 kg</option>
+                </select>
+                {errors.collection && (
+                  <p className="mt-1.5 text-xs text-red-500">{errors.collection}</p>
+                )}
+              </div>
+
+              <div className="max-w-sm">
               <label className={labelClass}>
                 Base Weight <span className="text-red-500">*</span>
               </label>
@@ -1085,6 +1112,7 @@ function AddProduct() {
               <p className="mt-1.5 text-xs text-gray-400">
                 Example: 0.5 means each flavour price is for 0.5 kg.
               </p>
+              </div>
             </div>
 
             {/* FLAVOUR ROWS */}
@@ -1150,10 +1178,8 @@ function AddProduct() {
               </p>
 
               <p className="mt-1 text-xs leading-5 text-gray-500">
-                If Chocolate costs ₹250 for 0.5 kg, the proportional
-                prices are ₹500 for 1 kg, ₹750 for 1.5 kg, and ₹1,000
-                for 2 kg. This is an example; your backend and customer
-                product page must implement the same pricing rule.
+                The selected collection adds its fixed amount for every extra 0.5 kg.
+                The flavour price is the price at the base weight.
               </p>
             </div>
           </section>

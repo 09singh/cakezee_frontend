@@ -17,7 +17,11 @@ import {
   mapApiOrder,
 } from "../../../api/orders.api";
 
-const filters = ["All", "Pending", "Preparing", "Ready"];
+const filters = ["All", "Pending", "Preparing", "Ready", "Cancelled"];
+const mapKitchenOrder = (order) => ({
+  ...mapApiOrder(order),
+  customer: order.customerName || "Customer",
+});
 
 /* ================= KITCHEN TIME ================= */
 
@@ -142,7 +146,7 @@ function KitchenDashboard() {
     try {
       const result = await getStaffOrders({ limit: 100 });
 
-      setOrders((result?.items || []).map(mapApiOrder));
+      setOrders((result?.items || []).map(mapKitchenOrder));
       setLoadError("");
     } catch (error) {
       setLoadError(
@@ -210,7 +214,7 @@ function KitchenDashboard() {
 
       setOrders((items) =>
         items.map((order) =>
-          order.id === orderId ? mapApiOrder(updated) : order
+          order.id === orderId ? mapKitchenOrder(updated) : order
         )
       );
     } catch (error) {
@@ -656,6 +660,13 @@ function KitchenOrderCard({
             </div>
           )}
 
+          {order.status === "Cancelled" && (
+            <div className="flex items-center justify-center gap-2 rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              <CircleAlert size={17} />
+              Order cancelled · no further action
+            </div>
+          )}
+
           {order.status === "Completed" && (
             <div className="flex items-center justify-center gap-2 rounded-lg bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-500">
               <CheckCircle2 size={17} />
@@ -687,6 +698,10 @@ function KitchenStatus({ status }) {
     Completed: {
       className: "bg-gray-100 text-gray-600",
       dot: "bg-gray-500",
+    },
+    Cancelled: {
+      className: "bg-red-50 text-red-700",
+      dot: "bg-red-500",
     },
   };
 

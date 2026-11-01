@@ -7,101 +7,83 @@ import {
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { getOrderLookups, saveOrderLookup } from "../../../data/order";
-import { getGuestOrder } from "../../../api/auth.api";
-import { requestOrderCancellation } from "../../../api/orders.api";
+import EmailOtpVerification from "../../../components/auth/EmailOtpVerification";
+import OrderDetailsCard from "../../../components/orders/OrderDetailsCard";
 import OrderProgress from "../../../components/orders/OrderProgress";
+import { getEmailCustomerOrders } from "../../../api/auth.api";
+import { requestOrderCancellation } from "../../../api/orders.api";
+import { createCheckoutId, getEmailVerificationSession } from "../../../utils/checkoutStorage";
 
 function OrdersPage() {
+  const [email, setEmail] = useState(() => getEmailVerificationSession()?.email || "");
+  const [checkoutId] = useState(
+    () => getEmailVerificationSession()?.checkoutId || createCheckoutId()
+  );
+  const [emailVerification, setEmailVerification] = useState(() => {
+    const saved = getEmailVerificationSession();
+    return Number(saved?.expiresAt) > Date.now() ? saved : null;
+  });
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [phone, setPhone] = useState("");
-  const [orderId, setOrderId] = useState("");
+  const [ordersLoadedFor, setOrdersLoadedFor] = useState("");
   const [lookupError, setLookupError] = useState("");
-  const [lookingUp, setLookingUp] = useState(false);
   const [cancellingId, setCancellingId] = useState("");
+  const [editingOrder, setEditingOrder] = useState(null);
+  const [expiredEmailToken, setExpiredEmailToken] = useState("");
+  useEffect(() => {
+    if (!emailVerification?.token) return undefined;
+    const delay = Math.max(0, Number(emailVerification.expiresAt) - Date.now());
+    const timer = window.setTimeout(
+      () => setExpiredEmailToken(emailVerification.token),
+      delay
+    );
+    return () => window.clearTimeout(timer);
+  }, [emailVerification?.token, emailVerification?.expiresAt]);
+  const isAuthenticated = Boolean(
+    emailVerification?.email === email.trim().toLowerCase() &&
+    emailVerification?.token &&
+    expiredEmailToken !== emailVerification.token
+  );
 
   useEffect(() => {
     let cancelled = false;
 
-    const lookups = getOrderLookups();
+    if (!isAuthenticated) {
+      return () => {
+        cancelled = true;
+      };
+    }
 
-    Promise.allSettled(
-      lookups.map(({ phone: savedPhone, orderId: savedOrderId }) =>
-        getGuestOrder(savedPhone, savedOrderId)
-      )
-    )
-      .then((results) => {
+    const refreshOrders = async () => {
+      try {
+        const response = await getEmailCustomerOrders(emailVerification);
         if (cancelled) return;
-
-        const loadedOrders = results
-          .filter((result) => result.status === "fulfilled")
-          .map((result) => result.value?.data)
-          .filter(Boolean);
-
-        setOrders(loadedOrders);
-
-        const failedLookup = results.some(
-          (result) => result.status === "rejected"
+        const loadedOrders = response?.data || [];
+        setOrders(Array.isArray(loadedOrders) ? loadedOrders : []);
+        setOrdersLoadedFor(emailVerification.email);
+        setLookupError("");
+      } catch (error) {
+        if (cancelled) return;
+        setOrdersLoadedFor(emailVerification.email);
+        setLookupError(
+          error?.response?.data?.message ||
+            "Orders linked to this email could not be loaded. Verify your email again."
         );
+      }
+    };
 
-        if (failedLookup) {
-          setLookupError(
-            "Some saved orders could not be loaded. Check their phone and order reference."
-          );
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    refreshOrders();
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") refreshOrders();
+    }, 30000);
+    const onFocus = () => refreshOrders();
+    window.addEventListener("focus", onFocus);
 
     return () => {
       cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
     };
-  }, []);
-
-  const handleLookup = async (event) => {
-    event.preventDefault();
-
-    if (lookingUp) return;
-
-    setLookingUp(true);
-    setLookupError("");
-
-    try {
-      const response = await getGuestOrder(
-        phone.trim(),
-        orderId.trim()
-      );
-
-      const foundOrder = response?.data;
-
-      if (!foundOrder?.orderId) {
-        throw new Error(
-          "The order service returned an invalid response."
-        );
-      }
-
-      saveOrderLookup(phone.trim(), foundOrder.orderId);
-
-      setOrders((current) => [
-        foundOrder,
-        ...current.filter(
-          (item) => item.orderId !== foundOrder.orderId
-        ),
-      ]);
-
-      setOrderId("");
-    } catch (error) {
-      setLookupError(
-        error?.response?.data?.message ||
-          error.message ||
-          "Could not find that order."
-      );
-    } finally {
-      setLookingUp(false);
-    }
-  };
+  }, [isAuthenticated, emailVerification]);
 
   const handleCancellation = async (order) => {
     if (cancellingId) return;
@@ -118,8 +100,9 @@ function OrdersPage() {
     try {
       const updated = await requestOrderCancellation(
         order.orderId,
-        order.phone,
-        reason.trim()
+        reason.trim(),
+        emailVerification,
+        emailVerification.checkoutId
       );
 
       setOrders((items) =>
@@ -137,13 +120,10 @@ function OrdersPage() {
     }
   };
 
-  const inputClass =
-    "w-full min-w-0 rounded-lg border border-[#E8D9D5] bg-white px-3 py-3 text-sm text-[#35262A] outline-none transition placeholder:text-[#9B898B] focus:border-[#65152D] focus:ring-2 focus:ring-[#65152D]/10";
+  const visibleOrders = isAuthenticated && ordersLoadedFor === emailVerification?.email ? orders : [];
+  const pageLoading = isAuthenticated && ordersLoadedFor !== emailVerification?.email;
 
-  const primaryButtonClass =
-    "rounded-lg bg-[#65152D] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#501023] disabled:cursor-not-allowed disabled:opacity-60";
-
-  if (!loading && orders.length === 0) {
+  if (!pageLoading && visibleOrders.length === 0) {
     return (
       <section className="page-container flex min-h-[60vh] flex-col items-center justify-center bg-[#FFF5E9] py-12 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-[#E8D9D5]">
@@ -162,51 +142,38 @@ function OrdersPage() {
         </h1>
 
         <p className="mt-2 max-w-sm text-sm leading-6 text-[#78676A]">
-          Look up an order with its contact phone number and order
-          reference.
+          {!isAuthenticated
+            ? "Verify your email address to view orders linked to that email."
+            : "Orders placed with this verified email address will appear here."}
         </p>
+        {lookupError && (
+          <p role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {lookupError}
+          </p>
+        )}
 
-        <form
-          onSubmit={handleLookup}
-          className="mt-6 w-full max-w-sm space-y-3 text-left"
-        >
-          <input
-            type="tel"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            required
-            autoComplete="tel"
-            placeholder="Contact phone number"
-            className={inputClass}
+        <div className="mt-6 w-full max-w-sm text-left">
+          <EmailOtpVerification
+            email={email}
+            checkoutId={checkoutId}
+            verification={emailVerification}
+            onEmailChange={(value) => {
+              setEmail(value);
+              setEmailVerification(null);
+              setOrders([]);
+              setOrdersLoadedFor("");
+            }}
+            onVerificationInvalidated={() => {
+              setEmailVerification(null);
+              setOrders([]);
+              setOrdersLoadedFor("");
+            }}
+            onVerified={(value) => {
+              setEmailVerification(value);
+              setEmail(value.email);
+            }}
           />
-
-          <input
-            value={orderId}
-            onChange={(event) =>
-              setOrderId(event.target.value.toUpperCase())
-            }
-            required
-            placeholder="Order reference (e.g. CZ...)"
-            className={inputClass}
-          />
-
-          {lookupError && (
-            <p
-              role="alert"
-              className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
-            >
-              {lookupError}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={lookingUp}
-            className={`w-full ${primaryButtonClass}`}
-          >
-            {lookingUp ? "Looking up..." : "Find order"}
-          </button>
-        </form>
+        </div>
 
         <Link
           to="/category/all"
@@ -214,6 +181,7 @@ function OrdersPage() {
         >
           Browse Cakes
         </Link>
+
       </section>
     );
   }
@@ -240,52 +208,18 @@ function OrdersPage() {
           </p>
         </div>
 
-        {/* Order Lookup */}
-        <form
-          onSubmit={handleLookup}
-          className="mt-6 grid gap-3 rounded-xl border border-[#E8D9D5] bg-white p-4 shadow-sm sm:grid-cols-[1fr_1fr_auto]"
-        >
-          <input
-            type="tel"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            required
-            autoComplete="tel"
-            placeholder="Contact phone number"
-            className={inputClass}
-          />
-
-          <input
-            value={orderId}
-            onChange={(event) =>
-              setOrderId(event.target.value.toUpperCase())
-            }
-            required
-            placeholder="Order reference"
-            className={inputClass}
-          />
-
-          <button
-            type="submit"
-            disabled={lookingUp}
-            className={primaryButtonClass}
+        {lookupError && (
+          <p
+            role="alert"
+            className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
           >
-            {lookingUp ? "Searching..." : "Find order"}
-          </button>
-
-          {lookupError && (
-            <p
-              role="alert"
-              className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 sm:col-span-3"
-            >
-              {lookupError}
-            </p>
-          )}
-        </form>
+            {lookupError}
+          </p>
+        )}
 
         {/* Orders */}
         <div className="mt-7 space-y-5">
-          {loading ? (
+          {pageLoading ? (
             <div className="rounded-xl border border-[#E8D9D5] bg-white py-12 text-center">
               <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-[#E8D9D5] border-t-[#65152D]" />
 
@@ -294,7 +228,7 @@ function OrdersPage() {
               </p>
             </div>
           ) : (
-            orders.map((order) => {
+            visibleOrders.map((order) => {
               const cakePrice = Number(
                 order.pricing?.cakePrice ||
                   order.cakePrice ||
@@ -337,8 +271,12 @@ function OrdersPage() {
                       </p>
                     </div>
 
-                    <span className="inline-flex w-fit items-center rounded-full border border-[#E8D9D5] bg-white px-3 py-1.5 text-xs font-semibold text-[#65152D]">
-                      Order Progress
+                    <span className={`inline-flex w-fit items-center rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                      order.status === "Cancelled"
+                        ? "border-red-200 bg-red-50 text-red-700"
+                        : "border-[#E8D9D5] bg-white text-[#65152D]"
+                    }`}>
+                      {order.status === "Cancelled" ? "Order Cancelled" : "Order Progress"}
                     </span>
                   </div>
 
@@ -371,20 +309,40 @@ function OrdersPage() {
                       />
 
                       <div className="min-w-0 flex-1">
-                        <h2 className="text-sm font-semibold leading-6 text-[#35262A] sm:text-base">
-                          {order.productName}
-                        </h2>
-
-                        <p className="mt-1 text-xs leading-5 text-[#78676A]">
-                          {order.weight
-                            ? `${order.weight} kg`
-                            : order.size}
-                          {" · "}
-                          {order.flavour}
-                          {order.quantity > 1
-                            ? ` · Qty ${order.quantity}`
-                            : ""}
-                        </p>
+                        {(order.items?.length ? order.items : [{
+                          name: order.productName,
+                          itemType: "Cake",
+                          weight: order.weight,
+                          size: order.size,
+                          flavour: order.flavour,
+                          quantity: order.quantity,
+                        }]).map((item, index) => (
+                          <div key={`${item.name}-${index}`} className={index ? "mt-3 border-t border-[#F0E5DF] pt-3" : ""}>
+                            <h2 className="text-sm font-semibold leading-6 text-[#35262A] sm:text-base">
+                              {item.name}
+                            </h2>
+                            <p className="mt-1 text-xs leading-5 text-[#78676A]">
+                              {item.itemType || "Cake"}
+                              {" · "}
+                              {item.itemType === "Cake"
+                                ? item.weight ? `${item.weight} kg` : item.size
+                                : "per piece"}
+                              {" · "}
+                              {item.flavour}
+                              {item.quantity > 1 ? ` · Qty ${item.quantity}` : ""}
+                            </p>
+                            {item.customisation?.messageOnCake && (
+                              <p className="mt-1 text-xs leading-5 text-[#78676A]">
+                                Message: <span className="font-medium text-[#35262A]">{item.customisation.messageOnCake}</span>
+                              </p>
+                            )}
+                            {item.customisation?.theme && (
+                              <p className="mt-1 text-xs leading-5 text-[#78676A]">
+                                Theme: <span className="font-medium text-[#35262A]">{item.customisation.theme}</span>
+                              </p>
+                            )}
+                          </div>
+                        ))}
 
                         {order.customisation?.nameOnCake && (
                           <p className="mt-2 text-xs leading-5 text-[#78676A]">
@@ -544,8 +502,19 @@ function OrdersPage() {
                       </p>
                     )}
 
+                    {!["Delivered", "Cancelled", "Rejected", "Returned to Bakery"].includes(order.status) && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingOrder(order)}
+                        className="mt-4 rounded-lg border border-[#65152D] bg-white px-4 py-2.5 text-xs font-semibold text-[#65152D] transition hover:bg-[#FFF5E9]"
+                      >
+                        Change order details
+                      </button>
+                    )}
+
                     {/* Cancellation */}
                     {[
+                      "Pending Payment",
                       "Confirmed",
                       "Preparing",
                       "Ready for Delivery",
@@ -562,9 +531,20 @@ function OrdersPage() {
                         >
                           {cancellingId === order.orderId
                             ? "Submitting..."
-                            : "Request cancellation"}
+                            : "Cancel order"}
                         </button>
                       )}
+                     {[
+                      "Pending Payment",
+                      "Confirmed",
+                      "Preparing",
+                      "Ready for Delivery",
+                      "Out for Delivery",
+                     ].includes(order.status) && (
+                      <p className="mt-2 text-xs text-[#78676A]">
+                        Cancellation is available until 2 hours before delivery.
+                      </p>
+                     )}
                   </div>
                 </article>
               );
@@ -572,6 +552,19 @@ function OrdersPage() {
           )}
         </div>
       </div>
+      {editingOrder && (
+        <OrderDetailsCard
+          key={editingOrder.orderId}
+          order={editingOrder}
+          mode="customer"
+          startInEditMode
+          onClose={() => setEditingOrder(null)}
+          onSaved={(updated) => {
+            setOrders((items) => items.map((item) => item.orderId === updated.orderId ? updated : item));
+            setEditingOrder(updated);
+          }}
+        />
+      )}
     </section>
   );
 }

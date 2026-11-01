@@ -66,6 +66,10 @@ const OrdersPage = lazy(() =>
   import("./features/orders/pages/OrdersPage")
 );
 
+const SharedOrderForm = lazy(() =>
+  import("./features/orders/pages/SharedOrderForm.jsx")
+);
+
 const AccountPage = lazy(() =>
   import("./features/customer/pages/AccountPage")
 );
@@ -123,6 +127,9 @@ const CouponsPage = lazy(() =>
 const CustomersDashboard = lazy(() =>
   import("./features/admain/customers/CustomersDashboard.jsx")
 );
+const StaffManagement = lazy(() =>
+  import("./features/admain/staff/StaffManagement.jsx")
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -171,6 +178,9 @@ const KitchenDashboard = lazy(() =>
 
 const DeliveryDashboard = lazy(() =>
   import("./features/Deliverym/pages/DeliveryDashboard.jsx")
+);
+const ManagerDashboard = lazy(() =>
+  import("./features/manager/ManagerDashboard.jsx")
 );
 
 /*
@@ -256,6 +266,14 @@ function App() {
             path="/category/ready-now"
             element={<ReadyNowPage />}
           />
+          <Route
+            path="/category/mini-delight"
+            element={<ReadyNowPage fixedCategory="mini_delight" />}
+          />
+          <Route
+            path="/category/surprise-cake-hampers"
+            element={<ReadyNowPage fixedCategory="surprise_hampers" />}
+          />
 
           {/* ======================================================= */}
           {/* CATEGORY PRODUCTS                                       */}
@@ -328,11 +346,24 @@ function App() {
             path="/orders"
             element={<OrdersPage />}
           />
+          <Route
+            path="/order-request"
+            element={<SharedOrderForm />}
+          />
 
           <Route
             path="/account"
             element={<AccountPage />}
           />
+        </Route>
+
+        {/* MANAGER POS */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<RoleRoute allowedRoles={["manager"]} />}>
+            <Route element={<StaffLayout />}>
+              <Route path="/manager" element={<ManagerDashboard />} />
+            </Route>
+          </Route>
         </Route>
 
         {/* ========================================================= */}
@@ -361,6 +392,7 @@ function App() {
               <Route path="/admin/finance" element={<FinancePage />} />
               <Route path="/admin/analytics" element={<AnalyticsPage />} />
               <Route path="/admin/customers" element={<CustomersDashboard />} />
+              <Route path="/admin/staff" element={<StaffManagement />} />
               <Route path="/admin/inventory" element={<InventoryPage />} />
               <Route path="/admin/coupons" element={<CouponsPage />} />
               <Route path="/admin/kitchen" element={<KitchenDashboard />} />
@@ -438,8 +470,6 @@ function App() {
 }
 
 export default App;
-
-
 
 
 

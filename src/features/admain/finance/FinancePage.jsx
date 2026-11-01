@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { createFinanceAdjustment, getFinance, getFinanceInvoice } from "./finance.api";
+import { recordCodPayment } from "../../../api/orders.api";
 
 const tabs = ["Invoices", "Reconciliation", "Outstanding", "Credit Notes", "Store Credit"];
 
@@ -19,13 +20,9 @@ const localDate = (date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
 const initialFilters = () => {
-  const today = new Date();
-  const from = new Date(today);
-  from.setDate(from.getDate() - 29);
-
   return {
-    from: localDate(from),
-    to: localDate(today),
+    from: "",
+    to: "",
     mode: "all",
     type: "all",
   };
@@ -330,6 +327,8 @@ function FinancePage() {
   });
 
   const [savingAdjustment, setSavingAdjustment] = useState(false);
+  const [markingOutstanding, setMarkingOutstanding] = useState(false);
+  const [selectedOutstandingIds, setSelectedOutstandingIds] = useState(() => new Set());
   const loadRef = useRef(null);
 
   const load = useCallback(
@@ -443,6 +442,15 @@ function FinancePage() {
       ),
     [reconciliationItems, data.reconciliation.totals]
   );
+  const selectedOutstandingItems = data.outstanding.items.filter((item) =>
+    selectedOutstandingIds.has(item.orderId)
+  );
+  const selectedOutstandingTotal = selectedOutstandingItems.reduce(
+    (total, item) => total + Number(item.outstanding || 0),
+    0
+  );
+  const allOutstandingSelected = data.outstanding.items.length > 0 &&
+    selectedOutstandingItems.length === data.outstanding.items.length;
 
   const refresh = () => load(filters);
 
@@ -548,6 +556,74 @@ function FinancePage() {
     }
   };
 
+  const toggleOutstandingSelection = (orderId) => {
+    setSelectedOutstandingIds((selectedIds) => {
+      const next = new Set(selectedIds);
+      if (next.has(orderId)) next.delete(orderId);
+      else next.add(orderId);
+      return next;
+    });
+  };
+
+  const toggleSelectAllOutstanding = () => {
+    setSelectedOutstandingIds((selectedIds) => {
+      const allSelected = data.outstanding.items.length > 0 &&
+        data.outstanding.items.every((item) => selectedIds.has(item.orderId));
+      if (allSelected) return new Set();
+      return new Set(data.outstanding.items.map((item) => item.orderId));
+    });
+  };
+
+  const markSelectedOutstandingPaid = async () => {
+    const outstandingItems = selectedOutstandingItems;
+    if (!outstandingItems.length || markingOutstanding) return;
+
+    const confirmed = window.confirm(
+      `Mark ${outstandingItems.length} selected outstanding ${outstandingItems.length === 1 ? "order" : "orders"} (${rupees(selectedOutstandingTotal)}) as paid? This records the full order totals as cash collected.`
+    );
+    if (!confirmed) return;
+
+    setMarkingOutstanding(true);
+    setError("");
+    setNotice("");
+
+    let paidCount = 0;
+    const failures = [];
+
+    try {
+      for (const item of outstandingItems) {
+        try {
+          await recordCodPayment(item.orderId, Number(item.total), "cash");
+          paidCount += 1;
+        } catch (paymentError) {
+          failures.push({
+            orderId: item.orderId,
+            message: paymentError.response?.data?.message || "Payment could not be recorded.",
+          });
+        }
+      }
+
+      setSelectedOutstandingIds(
+        new Set(failures.map(({ orderId }) => orderId))
+      );
+      await load(filters);
+
+      if (paidCount) {
+        setNotice(`${paidCount} outstanding ${paidCount === 1 ? "order" : "orders"} marked paid and added to reconciliation as cash.`);
+      }
+      if (failures.length) {
+        setError(
+          `${failures.length} order${failures.length === 1 ? "" : "s"} could not be marked paid. ${failures
+            .slice(0, 3)
+            .map(({ orderId, message }) => `${orderId}: ${message}`)
+            .join(" ")}`
+        );
+      }
+    } finally {
+      setMarkingOutstanding(false);
+    }
+  };
+
   const exportCurrent = () => {
     if (tab === "Invoices") {
       exportCsv(
@@ -573,6 +649,9 @@ function FinancePage() {
           customer: item.customerName,
           phone: item.phone,
           invoice: item.orderId,
+          product: item.productName,
+          deliveryDate: item.deliveryDate,
+          deliveryTime: item.deliveryTime,
           type: item.type,
           mode: item.mode,
           transaction: item.transactionType || "Payment",
@@ -701,6 +780,9 @@ function FinancePage() {
       </nav>
 
       <section className="mb-5 flex flex-wrap items-end gap-3 rounded-2xl border border-[#E8D9D5] bg-white p-4 shadow-sm">
+        <p className="w-full text-xs text-[#78676A]">
+          Blank dates show all available finance history.
+        </p>
         <label className="flex flex-col gap-1 text-sm font-semibold text-[#35262A]">
           From
           <input
@@ -782,6 +864,7 @@ function FinancePage() {
                     ["all", "All"],
                     ["website", "Website"],
                     ["admin", "Admin"],
+                    ["pos", "POS"],
                     ["cash", "Cash / COD"],
                     ["upi", "UPI"],
                   ].map(([key, label]) => (
@@ -902,6 +985,7 @@ function FinancePage() {
                     <option value="all">All channels</option>
                     <option value="website">Website</option>
                     <option value="admin">Admin</option>
+                    <option value="pos">POS</option>
                   </select>
 
                   <SearchBox
@@ -974,6 +1058,13 @@ function FinancePage() {
                           <div className="text-xs text-[#65152D]">
                             {item.orderId} · {item.phone}
                           </div>
+                          {(item.productName || item.deliveryDate || item.deliveryTime) && (
+                            <div className="mt-1 text-xs text-[#78676A]">
+                              {[item.productName, item.deliveryDate, item.deliveryTime]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </div>
+                          )}
                         </td>
 
                         <td className="px-4 py-3">{item.type}</td>
@@ -1014,15 +1105,41 @@ function FinancePage() {
                     </p>
                     <p className="mt-1 text-sm text-red-600">
                       Outstanding across {data.outstanding.items.length}{" "}
-                      delivered{" "}
+                      unpaid{" "}
                       {data.outstanding.items.length === 1 ? "order" : "orders"}
                     </p>
                   </div>
 
-                  <span className="text-xs text-[#78676A]">
-                    Sorted by delivery date · oldest first
-                  </span>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-xs text-[#78676A]">
+                      Sorted by delivery date · oldest first
+                    </span>
+                    <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#65152D]">
+                      <input
+                        type="checkbox"
+                        checked={allOutstandingSelected}
+                        onChange={toggleSelectAllOutstanding}
+                        disabled={!data.outstanding.items.length || markingOutstanding}
+                        className="h-4 w-4 accent-[#65152D]"
+                      />
+                      Select all
+                    </label>
+                    <button
+                      type="button"
+                      onClick={markSelectedOutstandingPaid}
+                      disabled={!selectedOutstandingItems.length || markingOutstanding}
+                      className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Check size={16} />
+                      {markingOutstanding
+                        ? "Marking paid..."
+                        : `Mark selected as Paid (${selectedOutstandingItems.length})`}
+                    </button>
+                  </div>
                 </div>
+                <p className="mt-3 text-xs text-[#78676A]">
+                  Selected: {selectedOutstandingItems.length} orders · {rupees(selectedOutstandingTotal)}
+                </p>
               </div>
 
               <div className="space-y-3">
@@ -1036,24 +1153,34 @@ function FinancePage() {
                     }`}
                   >
                     <div className="flex flex-wrap justify-between gap-3">
-                      <button
-                        type="button"
-                        onClick={() => openInvoice(item.orderId)}
-                        className="text-left"
-                      >
-                        <strong className="text-[#35262A]">
-                          {item.customerName}
-                        </strong>
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          aria-label={`Select outstanding order ${item.orderId}`}
+                          checked={selectedOutstandingIds.has(item.orderId)}
+                          onChange={() => toggleOutstandingSelection(item.orderId)}
+                          disabled={markingOutstanding}
+                          className="mt-1 h-4 w-4 accent-[#65152D]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => openInvoice(item.orderId)}
+                          className="text-left"
+                        >
+                          <strong className="text-[#35262A]">
+                            {item.customerName}
+                          </strong>
 
-                        <p className="mt-1 text-sm text-[#65152D]">
-                          Order {item.orderId} · Phone: {item.phone}
-                        </p>
+                          <p className="mt-1 text-sm text-[#65152D]">
+                            Order {item.orderId} · Phone: {item.phone}
+                          </p>
 
-                        <p className="mt-1 text-sm text-[#78676A]">
-                          Delivered {dateLabel(item.deliveryDate)}
-                          {item.deliveryTime ? ` at ${item.deliveryTime}` : ""}
-                        </p>
-                      </button>
+                          <p className="mt-1 text-sm text-[#78676A]">
+                            Delivered {dateLabel(item.deliveryDate)}
+                            {item.deliveryTime ? ` at ${item.deliveryTime}` : ""}
+                          </p>
+                        </button>
+                      </div>
 
                       <div className="text-right">
                         <strong className="text-xl text-orange-600">
@@ -1085,7 +1212,7 @@ function FinancePage() {
                 ))}
 
                 {!data.outstanding.items.length && (
-                  <Empty text="No outstanding balances for delivered orders in this date range." />
+                  <Empty text="No outstanding balances for unpaid orders not yet delivered in this date range." />
                 )}
               </div>
             </section>

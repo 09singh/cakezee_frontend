@@ -12,8 +12,10 @@ import {
   Tag,
   Truck,
   Users,
+  UserRoundCog,
   Wallet,
   Zap,
+  ShoppingCart,
   X,
 } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -32,6 +34,7 @@ const adminItems = [
   { label: "Ready Now", icon: Zap, to: "/admin/ready-now" },
   { label: "Inventory", icon: Boxes, to: "/admin/inventory" },
   { label: "Customers", icon: Users, to: "/admin/customers" },
+  { label: "Staff Access", icon: UserRoundCog, to: "/admin/staff" },
   { label: "Offers & Coupons", icon: Tag, to: "/admin/coupons" },
   { label: "WhatsApp", icon: MessageCircle, href: "https://web.whatsapp.com/", green: true },
   // { label: "Marketing (Ads)", icon: Megaphone, badge: "8" },
@@ -51,12 +54,15 @@ function StaffLayout() {
   const [newOrderCount, setNewOrderCount] = useState(0);
   const isAdmin = user?.role === "admin";
   const isKitchen = user?.role === "kitchen";
-  const title = isAdmin ? "Admin" : isKitchen ? "Kitchen" : "Delivery";
+  const isManager = user?.role === "manager";
+  const title = isAdmin ? "Admin" : isKitchen ? "Kitchen" : isManager ? "Manager" : "Delivery";
   const items = isAdmin
     ? adminItems
-    : isKitchen
+      : isKitchen
       ? [{ label: "Kitchen Orders", icon: ChefHat, to: "/kitchen" }]
-      : [{ label: "Delivery Orders", icon: Truck, to: "/delivery" }];
+      : isManager
+        ? [{ label: "POS & Store", icon: ShoppingCart, to: "/manager" }]
+        : [{ label: "Delivery Orders", icon: Truck, to: "/delivery" }];
 
   useEffect(() => {
     if (!isAdmin) return undefined;
@@ -167,7 +173,7 @@ function StaffLayout() {
             <p className="font-serif text-[25px] font-bold tracking-tight">Cakezee</p>
             {!isAdmin && (
               <p className="mt-0.5 text-[11px] text-gray-400">
-                {isKitchen ? "Kitchen Management" : "Delivery Management"}
+                {isKitchen ? "Kitchen Management" : isManager ? "Store Management" : "Delivery Management"}
               </p>
             )}
           </div>

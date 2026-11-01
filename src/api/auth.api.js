@@ -6,32 +6,6 @@ import api from "./axios";
 |--------------------------------------------------------------------------
 */
 
-/**
- * Request OTP for customer login
- * POST /api/v1/auth/customer/request-otp
- */
-export const requestCustomerOtp = async (phone) => {
-  const response = await api.post(
-    "/auth/customer/request-otp",
-    { phone }
-  );
-
-  return response.data;
-};
-
-/**
- * Verify customer OTP
- * POST /api/v1/auth/customer/verify-otp
- */
-export const verifyCustomerOtp = async (phone, otp) => {
-  const response = await api.post(
-    "/auth/customer/verify-otp",
-    { phone, otp }
-  );
-
-  return response.data;
-};
-
 /*
 |--------------------------------------------------------------------------
 | Staff Authentication
@@ -85,8 +59,8 @@ export const importAdminCustomers = async (customers) => {
   return response.data;
 };
 
-export const getAdminCustomerOrders = async (phone) => {
-  const response = await api.get(`/auth/admin/customers/${encodeURIComponent(phone)}/orders`);
+export const getAdminCustomerOrders = async (customerId) => {
+  const response = await api.get(`/auth/admin/customers/${encodeURIComponent(customerId)}/orders`);
   return response.data;
 };
 
@@ -332,11 +306,9 @@ export const getCategoryAddons = async (categorySlug) => {
   return response.data;
 };
 
-export const createGuestOrder = async (orderData) => {
+export const createSharedOrder = async (orderData) => {
   const checkoutId = orderData?.checkoutId;
-  const response = await api.post("/orders", orderData, {
-    // The backend must enforce this key with a unique constraint or an
-    // equivalent atomic idempotency check. Reusing checkoutId makes retries safe.
+  const response = await api.post("/orders/email/shared-form", orderData, {
     headers: checkoutId ? { "Idempotency-Key": checkoutId } : undefined,
   });
   return response.data;
@@ -350,9 +322,19 @@ export const createAdminOrder = async (orderData) => {
   return response.data;
 };
 
-export const getGuestOrder = async (phone, orderId) => {
-  const response = await api.get("/orders/lookup", {
-    params: { phone, orderId },
+export const getEmailCustomerOrders = async (verification) => {
+  const response = await api.post("/orders/email/orders", {
+    customerEmail: verification.email,
+    emailVerificationToken: verification.token,
+    checkoutId: verification.checkoutId,
+  });
+  return response.data;
+};
+
+export const createEmailVerifiedOrder = async (orderData) => {
+  const checkoutId = orderData?.checkoutId;
+  const response = await api.post("/orders/email", orderData, {
+    headers: checkoutId ? { "Idempotency-Key": checkoutId } : undefined,
   });
   return response.data;
 };

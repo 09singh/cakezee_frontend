@@ -17,6 +17,14 @@ export const overrideOrderStatus = (orderId, status, version, reason) =>
     reason,
   }).then((response) => response.data.data);
 
+export const updateAdminOrderDetails = (orderId, details) =>
+  api.patch(`/orders/${encodeURIComponent(orderId)}/admin-details`, details)
+    .then((response) => response.data.data);
+
+export const updateCustomerOrderDetails = (orderId, details) =>
+  api.patch(`/orders/${encodeURIComponent(orderId)}/customer-details`, details)
+    .then((response) => response.data.data);
+
 export const recordCodPayment = (orderId, amount, method = "cash") =>
   api.post(`/orders/${encodeURIComponent(orderId)}/payment/collect`, { amount, method })
     .then((response) => response.data.data);
@@ -27,10 +35,20 @@ export const recordDeliveryAttempt = (orderId, reason, resolution) =>
     resolution,
   }).then((response) => response.data.data);
 
-export const requestOrderCancellation = (orderId, phone, reason) =>
+export const cancelOrder = (orderId, reason) =>
+  api.post(`/orders/${encodeURIComponent(orderId)}/cancel`, { reason })
+    .then((response) => response.data.data);
+
+export const requestOrderCancellation = (orderId, reason, verification, checkoutId) =>
   api.post(`/orders/${encodeURIComponent(orderId)}/cancellation-request`, {
-    phone,
     reason,
+    customerEmail: verification?.email,
+    emailVerificationToken: verification?.token,
+    checkoutId,
+  }, {
+    headers: verification?.token
+      ? { Authorization: `Bearer ${verification.token}` }
+      : undefined,
   }).then((response) => response.data.data);
 
 export const decideOrderCancellation = (orderId, decision, reason = "") =>
@@ -56,15 +74,26 @@ export const mapApiOrder = (order) => {
     Cancelled: "Cancelled",
     Rejected: "Rejected",
   };
-  const isPaid = String(order.payment?.status || "").toLowerCase() === "paid";
-  const isCod = [order.payment?.method, order.customisation?.paymentPreference]
-    .some((method) => ["cod", "cash"].includes(String(method || "").toLowerCase()));
+  const paymentStatus = String(
+    order.payment?.status || order.paymentStatus || ""
+  ).trim().toLowerCase();
+  const isPaid = paymentStatus === "paid";
+  const paymentMethod = String(
+    order.payment?.method || order.customisation?.paymentPreference || "cod"
+  ).toLowerCase();
+  const isCod = ["cod", "cash"].includes(paymentMethod);
+  const normalizedStatus = String(order.status || "").trim().toLowerCase();
+  const status = Object.entries(statuses).find(
+    ([apiStatus]) => apiStatus.toLowerCase() === normalizedStatus
+  )?.[1] || order.status;
   return {
     ...order,
     id: order.orderId,
-    channel: order.createdBy?.role === "admin" ? "Admin" : "Website",
+    channel: order.source === "pos" || order.createdBy?.role === "manager" ? "POS" : order.createdBy?.role === "admin" ? "Admin" : "Website",
     customer: order.customerName || order.phone || "Customer",
-    cake: order.productName,
+    cake: order.items?.length > 1
+      ? order.items.map((item) => `${item.name} × ${item.quantity}`).join(", ")
+      : order.productName,
     productImage: order.productImage || order.product?.images?.[0]?.url || "",
     flavour: order.flavour,
     weight: order.productType === "ready_now"
@@ -76,10 +105,11 @@ export const mapApiOrder = (order) => {
     amount: `â‚¹${Number(order.pricing?.total || 0).toLocaleString("en-IN")}`,
     isCod,
     isCodPending: isCod && !isPaid,
+    isPaymentPending: !isPaid,
     payment: isPaid
       ? "Paid"
-      : `${order.customisation?.paymentPreference?.toUpperCase() || (order.payment?.method === "cod" ? "CASH" : order.payment?.method?.toUpperCase() || "COD")} Â· Pending`,
-    status: statuses[order.status] || order.status,
+      : `${paymentMethod.toUpperCase()} Â· Pending`,
+    status,
     notes: [order.occasion ? `Occasion: ${order.occasion}` : "",
       order.occasionDate ? `Occasion date: ${order.occasionDate}` : "",
       order.customisation?.theme, order.customisation?.nameOnCake ? `Name on cake: ${order.customisation.nameOnCake}` : "",

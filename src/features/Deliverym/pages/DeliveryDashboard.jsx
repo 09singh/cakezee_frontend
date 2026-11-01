@@ -17,7 +17,7 @@ import {
   changeOrderStatus,
   getStaffOrders,
   mapApiOrder,
-  recordDeliveryAttempt,
+  recordCodPayment,
 } from "../../../api/orders.api";
 
 const filters = [
@@ -225,24 +225,17 @@ function DeliveryDashboard() {
     try {
       let updated;
 
-      if (status === "Not Delivered") {
-        const reason = window.prompt(
-          "Reason: customer_unavailable, incorrect_address, customer_refused, or other"
-        );
-
+      if (status === "Cancelled") {
+        const reason = window.prompt("Why are you cancelling this delivery?");
         if (!reason?.trim()) return;
-
-        const resolution = window.confirm(
-          "Return this order to the bakery? Choose Cancel to retry delivery."
-        )
-          ? "return"
-          : "retry";
-
-        updated = await recordDeliveryAttempt(
+        updated = await changeOrderStatus(
           orderId,
-          reason.trim(),
-          resolution
+          "Cancelled",
+          order.lifecycleVersion,
+          reason.trim()
         );
+      } else if (status === "Paid") {
+        updated = await recordCodPayment(orderId, getOrderAmount(order), "cash");
       } else {
         const apiStatus =
           status === "Ready" ? "Ready for Delivery" : status;
@@ -259,9 +252,10 @@ function DeliveryDashboard() {
           item.id === orderId ? mapApiOrder(updated) : item
         )
       );
-    } catch {
+    } catch (error) {
       setActionError(
-        "Delivery status could not be updated. Please refresh and try again."
+        error?.response?.data?.message ||
+          "Delivery status could not be updated. Please refresh and try again."
       );
     } finally {
       setBusyOrderId("");
@@ -430,6 +424,11 @@ function DeliveryOrderCard({
 }) {
   const paymentLabel = String(order.payment || "Payment");
   const amount = getOrderAmount(order);
+  const isDelivered = String(order.status || "").trim().toLowerCase() === "delivered";
+  const paymentStatus = String(
+    order.payment?.status || order.paymentStatus || ""
+  ).trim().toLowerCase();
+  const isPaymentPending = order.isPaymentPending ?? paymentStatus !== "paid";
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4">
@@ -556,7 +555,7 @@ function DeliveryOrderCard({
           {/* OUT FOR DELIVERY */}
 
           {order.status === "Out for Delivery" && (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2">
               <button
                 type="button"
                 disabled={busy}
@@ -566,26 +565,39 @@ function DeliveryOrderCard({
                 <CheckCircle2 size={15} />
                 {busy ? "Updating..." : "Delivered"}
               </button>
-
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => onUpdateStatus(order.id, "Not Delivered")}
-                className="flex items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-xs font-semibold text-red-600 hover:bg-red-100 disabled:opacity-50"
-              >
-                <XCircle size={15} />
-                Not Delivered
-              </button>
             </div>
           )}
 
-          {/* DELIVERED: FINAL STATUS ONLY */}
+          {["Ready", "Out for Delivery", "Not Delivered"].includes(order.status) && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => onUpdateStatus(order.id, "Cancelled")}
+              className="w-full rounded-lg border border-red-200 bg-white px-4 py-2.5 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cancel order
+            </button>
+          )}
 
-          {order.status === "Delivered" && (
-            <div className="flex items-center justify-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-600">
-              <CheckCircle2 size={17} />
-              Delivered
-            </div>
+          {/* DELIVERED: RECORD PAYMENT COLLECTION */}
+
+          {isDelivered && (
+            isPaymentPending ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => onUpdateStatus(order.id, "Paid")}
+                className="flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <CheckCircle2 size={17} />
+                {busy ? "Updating..." : "Paid"}
+              </button>
+            ) : (
+              <div className="flex items-center justify-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-600">
+                <CheckCircle2 size={17} />
+                {order.payment === "Paid" ? "Paid" : "Delivered"}
+              </div>
+            )
           )}
 
           {/* NOT DELIVERED */}

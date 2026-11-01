@@ -1,22 +1,25 @@
-
 import axios from "axios";
+import { getEmailVerificationSession } from "../utils/checkoutStorage";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   timeout: 10000,
 });
-console.log("API BASE URL:", import.meta.env.VITE_API_URL);
-console.log("Axios BASE URL:", api.defaults.baseURL);
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("cakezee_token");
+    const emailSession = getEmailVerificationSession();
+    const explicitAuthorization = config.headers?.get
+      ? config.headers.get("Authorization")
+      : config.headers?.Authorization;
+    const token = explicitAuthorization ||
+      localStorage.getItem("cakezee_token") ||
+      (Number(emailSession?.expiresAt) > Date.now() ? emailSession.token : null);
 
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization = explicitAuthorization || `Bearer ${token}`;
     }
 
-    // FormData ke liye JSON Content-Type mat bhejo.
     if (config.data instanceof FormData) {
       delete config.headers["Content-Type"];
     } else if (config.data && !(config.data instanceof URLSearchParams)) {
@@ -35,7 +38,7 @@ api.interceptors.response.use(
   (error) => {
     const authorization = error.config?.headers?.Authorization ||
       error.config?.headers?.get?.("Authorization");
-    const isLoginRequest = /\/auth\/(staff\/login|customer\/request-otp|customer\/verify-otp)$/.test(
+    const isLoginRequest = /\/auth\/staff\/login$/.test(
       error.config?.url || ""
     );
     const requestToken = typeof authorization === "string"

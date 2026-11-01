@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
+  Copy,
   CircleHelp,
   Eye,
   Plus,
@@ -20,6 +21,8 @@ import {
   mapApiOrder,
   overrideOrderStatus,
 } from "../../../api/orders.api";
+import OrderDetailsCard from "../../../components/orders/OrderDetailsCard";
+import { calculateProductPrice } from "../../../utils/productPricing";
 
 const dateFilters = [
   "Upcoming",
@@ -169,7 +172,7 @@ const getCancellationInfo = (order) => {
 
   const cancelledEvent = [...history].reverse().find((event) =>
     ["cancelled", "canceled"].includes(
-      String(event.status || event.to || "").toLowerCase()
+      String(event.status || event.to || event.next || "").toLowerCase()
     )
   );
 
@@ -470,9 +473,6 @@ function ManualOrderDrawer({ onClose, onCreated }) {
             Number(product?.pricing?.baseWeight) ||
             0;
 
-          const baseWeight =
-            Number(product?.pricing?.baseWeight) || weight || 1;
-
           return {
             ...current,
             categoryId:
@@ -482,10 +482,7 @@ function ManualOrderDrawer({ onClose, onCreated }) {
             flavour: firstFlavour?.name || "",
             price: firstFlavour
               ? String(
-                  Math.round(
-                    (Number(firstFlavour.basePrice || 0) * weight) /
-                      baseWeight
-                  )
+                  calculateProductPrice(product, weight, firstFlavour)
                 )
               : "",
           };
@@ -530,11 +527,7 @@ function ManualOrderDrawer({ onClose, onCreated }) {
   );
 
   const calculatedPrice = selectedFlavour
-    ? Math.round(
-        (Number(selectedFlavour.basePrice || 0) *
-          (selectedSize?.weight || 1)) /
-          (Number(selectedProduct?.pricing?.baseWeight) || 1)
-      )
+    ? calculateProductPrice(selectedProduct, selectedSize?.weight || 1, selectedFlavour)
     : 0;
 
   const orderTotal =
@@ -557,18 +550,9 @@ function ManualOrderDrawer({ onClose, onCreated }) {
         ? flavours.find((flavour) => flavour.name === value)
         : selectedFlavour;
 
-    const baseWeight =
-      Number(selectedProduct?.pricing?.baseWeight) ||
-      nextSize?.weight ||
-      1;
-
     const price = nextFlavour
       ? String(
-          Math.round(
-            (Number(nextFlavour.basePrice || 0) *
-              (nextSize?.weight || 1)) /
-              baseWeight
-          )
+          calculateProductPrice(selectedProduct, nextSize?.weight || 1, nextFlavour)
         )
       : "";
 
@@ -588,9 +572,6 @@ function ManualOrderDrawer({ onClose, onCreated }) {
       Number(product?.pricing?.baseWeight) ||
       0;
 
-    const baseWeight =
-      Number(product?.pricing?.baseWeight) || initialWeight || 1;
-
     setForm((current) => ({
       ...current,
       productId,
@@ -598,11 +579,7 @@ function ManualOrderDrawer({ onClose, onCreated }) {
       flavour: productFlavours[0]?.name || "",
       price: productFlavours[0]
         ? String(
-            Math.round(
-              (Number(productFlavours[0].basePrice || 0) *
-                initialWeight) /
-                baseWeight
-            )
+            calculateProductPrice(product, initialWeight, productFlavours[0])
           )
         : "",
     }));
@@ -1419,6 +1396,32 @@ function OrdersDashboard() {
   const [activeStatus, setActiveStatus] = useState("All");
   const [search, setSearch] = useState("");
   const [showNewOrder, setShowNewOrder] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [shareLinkError, setShareLinkError] = useState("");
+
+  const copyOrderFormLink = async () => {
+    const link = `${window.location.origin}/order-request`;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(link);
+      } else {
+        const field = document.createElement("textarea");
+        field.value = link;
+        field.setAttribute("readonly", "");
+        field.style.position = "fixed";
+        field.style.opacity = "0";
+        document.body.appendChild(field);
+        field.select();
+        const copied = document.execCommand("copy");
+        field.remove();
+        if (!copied) throw new Error("Clipboard access is unavailable.");
+      }
+      setShareLinkError("");
+      setNotice("Order form link copied. Share it with your customer.");
+    } catch {
+      setShareLinkError("Could not copy the link. Copy this URL manually: " + link);
+    }
+  };
 
   const loadOrders = useCallback(async () => {
     try {
@@ -1667,18 +1670,34 @@ function OrdersDashboard() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              setNotice("");
-              setShowNewOrder(true);
-            }}
-            className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#65152D] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#501023] focus:outline-none focus:ring-2 focus:ring-[#65152D]/30 focus:ring-offset-2"
-          >
-            <Plus size={17} />
-            Add Order
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={copyOrderFormLink}
+              className="inline-flex h-11 items-center gap-2 rounded-lg border border-[#E8D9D5] bg-white px-4 text-sm font-semibold text-[#65152D] shadow-sm transition hover:bg-[#FFF5E9] focus:outline-none focus:ring-2 focus:ring-[#65152D]/30 focus:ring-offset-2"
+            >
+              <Copy size={16} />
+              Copy order form link
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setNotice("");
+                setShowNewOrder(true);
+              }}
+              className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#65152D] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#501023] focus:outline-none focus:ring-2 focus:ring-[#65152D]/30 focus:ring-offset-2"
+            >
+              <Plus size={17} />
+              Add Order
+            </button>
+          </div>
         </header>
+
+        {shareLinkError && (
+          <p role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {shareLinkError}
+          </p>
+        )}
 
         <section className="rounded-2xl border border-[#E8D9D5] bg-white p-4 shadow-[0_3px_14px_rgba(76,28,43,0.04)] sm:p-5">
           <label className="flex h-12 items-center gap-3 rounded-xl border border-[#E8D9D5] bg-[#FFFCF8] px-3.5 transition focus-within:border-[#65152D] focus-within:ring-2 focus-within:ring-[#65152D]/10">
@@ -1843,7 +1862,10 @@ function OrdersDashboard() {
                     return (
                       <tr
                         key={order.id}
-                        className="border-b border-[#F0E5E1] transition-colors last:border-0 hover:bg-[#FFFCF8]"
+                        onClick={(event) => {
+                          if (!event.target.closest("button")) setSelectedOrder(order);
+                        }}
+                        className="cursor-pointer border-b border-[#F0E5E1] transition-colors last:border-0 hover:bg-[#FFFCF8]"
                       >
                         <td className="px-4 py-4 text-xs font-bold text-[#65152D]">
                           #{order.id}
@@ -1953,20 +1975,28 @@ function OrdersDashboard() {
                         </td>
 
                         <td className="px-4 py-4">
-                          <button
-                            type="button"
-                            onClick={() => handleOverride(order)}
-                            disabled={busyOrderId === order.id}
-                            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-[#E8D9D5] bg-white px-3 py-2 text-xs font-semibold text-[#65152D] transition hover:border-[#CDAFB7] hover:bg-[#FFF5E9] disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <Eye size={14} />
-
-                            {busyOrderId === order.id
-                              ? "Processing..."
-                              : order.cancellation?.decision === "pending"
-                                ? "Review Cancellation"
-                                : "Override"}
-                          </button>
+                          <div className="flex flex-col items-start gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedOrder(order)}
+                              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-[#E8D9D5] bg-white px-3 py-2 text-xs font-semibold text-[#65152D] transition hover:border-[#CDAFB7] hover:bg-[#FFF5E9]"
+                            >
+                              <Eye size={14} />
+                              View / edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOverride(order)}
+                              disabled={busyOrderId === order.id}
+                              className="whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold text-[#78676A] underline underline-offset-2 transition hover:text-[#65152D] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {busyOrderId === order.id
+                                ? "Processing..."
+                                : order.cancellation?.decision === "pending"
+                                  ? "Review cancellation"
+                                  : "Override status"}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -2016,6 +2046,19 @@ function OrdersDashboard() {
         <ManualOrderDrawer
           onClose={() => setShowNewOrder(false)}
           onCreated={handleOrderCreated}
+        />
+      )}
+      {selectedOrder && (
+        <OrderDetailsCard
+          key={selectedOrder.id}
+          order={selectedOrder}
+          mode="admin"
+          onClose={() => setSelectedOrder(null)}
+          onSaved={(updated) => {
+            const mappedOrder = mapApiOrder(updated);
+            setOrders((items) => items.map((item) => item.id === updated.orderId ? mappedOrder : item));
+            setSelectedOrder(mappedOrder);
+          }}
         />
       )}
     </div>

@@ -282,7 +282,7 @@ function CustomerDetails({ customer, onBack }) {
     setLoading(true);
     setError("");
 
-    getAdminCustomerOrders(customer.phone)
+    getAdminCustomerOrders(customer.id)
       .then((response) => {
         if (active) {
           setOrders(Array.isArray(response.data) ? response.data : []);
@@ -303,7 +303,7 @@ function CustomerDetails({ customer, onBack }) {
     return () => {
       active = false;
     };
-  }, [customer.phone]);
+  }, [customer.id]);
 
   const customerStatus = classifyCustomer(customer);
 
@@ -522,8 +522,8 @@ function CustomersDashboard() {
 
   const fileRef = useRef(null);
 
-  const loadCustomers = useCallback(async () => {
-    setLoading(true);
+  const loadCustomers = useCallback(async ({ quiet = false } = {}) => {
+    if (!quiet) setLoading(true);
     setError("");
 
     try {
@@ -538,37 +538,24 @@ function CustomersDashboard() {
           "Could not load customers."
       );
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    let active = true;
-
-    getAdminCustomers()
-      .then((response) => {
-        if (active) {
-          setCustomers(
-            Array.isArray(response.data) ? response.data : []
-          );
-        }
-      })
-      .catch((err) => {
-        if (active) {
-          setError(
-            err?.response?.data?.message ||
-              "Could not load customers."
-          );
-        }
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
+    loadCustomers();
+    const refresh = () => {
+      if (document.visibilityState === "visible") loadCustomers({ quiet: true });
     };
-  }, []);
+    const interval = window.setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [loadCustomers]);
 
   const visibleCustomers = useMemo(() => {
     const searchText = query.trim().toLowerCase();

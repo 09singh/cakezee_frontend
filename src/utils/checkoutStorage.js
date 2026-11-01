@@ -1,4 +1,5 @@
 const CHECKOUT_KEY = "cakezee_checkout";
+const EMAIL_SESSION_KEY = "cakezee_email_session";
 
 export const createCheckoutId = () =>
   "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (character) => {
@@ -39,4 +40,26 @@ export const updateCheckout = (updates) => {
 
 export const clearCheckout = () => {
   sessionStorage.removeItem(CHECKOUT_KEY);
+};
+
+export const saveEmailVerificationSession = (verification) => {
+  try {
+    sessionStorage.setItem(EMAIL_SESSION_KEY, JSON.stringify(verification));
+  } catch (error) {
+    console.error("Failed to save email verification session:", error);
+  }
+};
+
+export const getEmailVerificationSession = () => {
+  try {
+    const session = sessionStorage.getItem(EMAIL_SESSION_KEY);
+    return session ? JSON.parse(session) : null;
+  } catch (error) {
+    console.error("Failed to read email verification session:", error);
+    return null;
+  }
+};
+
+export const clearEmailVerificationSession = () => {
+  sessionStorage.removeItem(EMAIL_SESSION_KEY);
 };

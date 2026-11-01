@@ -554,35 +554,22 @@ function Home() {
     })
     .slice(0, 6);
 
-  const getProductSearchText = (product) =>
-    [
-      product?.name,
-      product?.category,
-      product?.categoryId?.name,
-      product?.categoryId?.slug,
-      product?.readyNowCategory,
-      product?.productType,
-      ...(Array.isArray(product?.tags) ? product.tags : []),
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
+  const miniDelightProducts = readyNowProducts.filter(
+    (product) =>
+      String(product.readyNowCategory || "").toLowerCase() === "mini_delight"
+  );
 
-  const miniDelightProducts = products
-    .filter((product) =>
-      /mini.?delight|mini cake|miniature|cupcake|bento/.test(
-        getProductSearchText(product)
-      )
-    )
-    .slice(0, 4);
+  const surpriseProducts = readyNowProducts.filter(
+    (product) =>
+      String(product.readyNowCategory || "").toLowerCase() === "surprise_hampers"
+  );
 
-  const surpriseProducts = products
-    .filter((product) =>
-      /surprise|hamper|combo|gift box|cake hamper/.test(
-        getProductSearchText(product)
+  const regularReadyNowProducts = readyNowProducts.filter(
+    (product) =>
+      !["mini_delight", "surprise_hampers", "combos"].includes(
+        String(product.readyNowCategory || "").toLowerCase()
       )
-    )
-    .slice(0, 4);
+  );
 
   return (
     <main
@@ -882,9 +869,9 @@ function Home() {
             </Link>
           </div>
 
-          {readyNowProducts.length > 0 ? (
+          {regularReadyNowProducts.length > 0 ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:gap-4">
-              {readyNowProducts.slice(0, 4).map((product, index) => (
+              {regularReadyNowProducts.slice(0, 4).map((product, index) => (
                 <ProductCard
                   key={getId(product._id ?? product.id) || index}
                   product={product}
@@ -905,23 +892,28 @@ function Home() {
         <SectionHeading
           eyebrow="Little treats, big smiles"
           title="Mini Delights"
-          link="/category/all"
+          link="/category/mini-delight"
           linkText="Explore"
         />
 
         {miniDelightProducts.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:gap-4">
+          <div
+            aria-label="Mini Delight products"
+            className="flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-2 md:gap-4"
+            tabIndex={0}
+          >
             {miniDelightProducts.map((product, index) => (
-              <ProductCard
+              <div
                 key={getId(product._id ?? product.id) || index}
-                product={product}
-                index={index}
-              />
+                className="w-[72%] max-w-[240px] shrink-0 snap-start sm:w-[42%] md:w-[28%] lg:w-[23%]"
+              >
+                <ProductCard product={product} index={index} />
+              </div>
             ))}
           </div>
         ) : (
           <Link
-            to="/category/all"
+            to="/category/mini-delight"
             className="flex items-center justify-between rounded-xl border border-[#eaded6] bg-white p-4 text-xs text-[#702735]"
           >
             Explore Mini Delights <ArrowRight size={15} />
@@ -934,23 +926,28 @@ function Home() {
         <SectionHeading
           eyebrow="Make their day unexpected"
           title="Surprise Cakes & Hampers"
-          link="/category/all"
+          link="/category/surprise-cake-hampers"
           linkText="Explore"
         />
 
         {surpriseProducts.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:gap-4">
+          <div
+            aria-label="Surprise Cake and Hampers products"
+            className="flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-2 md:gap-4"
+            tabIndex={0}
+          >
             {surpriseProducts.map((product, index) => (
-              <ProductCard
+              <div
                 key={getId(product._id ?? product.id) || index}
-                product={product}
-                index={index}
-              />
+                className="w-[72%] max-w-[240px] shrink-0 snap-start sm:w-[42%] md:w-[28%] lg:w-[23%]"
+              >
+                <ProductCard product={product} index={index} />
+              </div>
             ))}
           </div>
         ) : (
           <Link
-            to="/category/all"
+            to="/category/surprise-cake-hampers"
             className="flex items-center justify-between rounded-xl border border-[#eaded6] bg-white p-4 text-xs text-[#702735]"
           >
             Explore Surprise Cakes & Hampers <ArrowRight size={15} />

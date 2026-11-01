@@ -58,6 +58,10 @@ function StaffLogin() {
           navigate("/delivery");
           break;
 
+        case "manager":
+          navigate("/manager");
+          break;
+
         default:
           setError("Your account does not have staff access.");
       }

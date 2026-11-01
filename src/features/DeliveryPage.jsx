@@ -5,15 +5,17 @@ import {
   MapPin,
 } from "lucide-react";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import CheckoutSteps from "../components/CheckoutSteps";
 
 import {
+  createCheckoutId,
   getCheckout,
   updateCheckout,
 } from "../utils/checkoutStorage";
+import EmailOtpVerification from "../components/auth/EmailOtpVerification";
 
 const OPENING_HOUR = 10;
 const CLOSING_HOUR = 20;
@@ -23,11 +25,15 @@ const formatINR = (amount) =>
   `\u20B9${Number(amount || 0).toLocaleString("en-IN")}`;
 
 function getLocalDateString(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const value = (type) => parts.find((part) => part.type === type).value;
 
-  return `${year}-${month}-${day}`;
+  return `${value("year")}-${value("month")}-${value("day")}`;
 }
 
 function formatHour(hour) {
@@ -66,16 +72,23 @@ function generateTimeSlots(selectedDate) {
     return [];
   }
 
-  // Today's date: show slots that have not started yet
+  // Keep a two-hour preparation window, rounding forward at :45.
   const now = new Date();
-  const currentHour = now.getHours();
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+  const value = (type) => Number(parts.find((part) => part.type === type).value);
+  const earliestHour = value("hour") + 2 + (value("minute") >= 45 ? 1 : 0);
 
   for (
     let hour = OPENING_HOUR;
     hour < CLOSING_HOUR;
     hour++
   ) {
-    if (hour >= currentHour) {
+    if (hour >= earliestHour) {
       slots.push({
         value: `${formatHour(hour)} - ${formatHour(hour + 1)}`,
         label: `${formatHour(hour)} - ${formatHour(hour + 1)}`,
@@ -109,6 +122,33 @@ function DeliveryPage() {
   const [phone, setPhone] = useState(
     checkout?.delivery?.phone || ""
   );
+
+  const [email, setEmail] = useState(
+    checkout?.delivery?.email || checkout?.emailVerification?.email || ""
+  );
+  const [checkoutId] = useState(
+    () => checkout?.checkoutId || createCheckoutId()
+  );
+  const [emailVerification, setEmailVerification] = useState(
+    checkout?.emailVerification || null
+  );
+  const [otpRequested, setOtpRequested] = useState(
+    Boolean(checkout?.emailOtpRequested)
+  );
+  const [resendAvailableAt, setResendAvailableAt] = useState(
+    checkout?.emailOtpResendAt || null
+  );
+  const [expiredEmailToken, setExpiredEmailToken] = useState("");
+
+  useEffect(() => {
+    if (!emailVerification?.token) return undefined;
+    const delay = Math.max(0, Number(emailVerification.expiresAt) - Date.now());
+    const timer = window.setTimeout(
+      () => setExpiredEmailToken(emailVerification.token),
+      delay
+    );
+    return () => window.clearTimeout(timer);
+  }, [emailVerification?.token, emailVerification?.expiresAt]);
 
   if (!checkout) {
     return (
@@ -147,10 +187,44 @@ function DeliveryPage() {
 
   const today = getLocalDateString();
   const timeSlots = generateTimeSlots(date);
+  const normalizedEmail = email.trim().toLowerCase();
+  const isEmailVerified = Boolean(
+    emailVerification?.email === normalizedEmail &&
+    emailVerification?.token &&
+    expiredEmailToken !== emailVerification.token
+  );
+
+  const persistDelivery = (updates) => {
+    updateCheckout({
+      checkoutId,
+      delivery: {
+        ...(getCheckout()?.delivery || {}),
+        method,
+        date,
+        time,
+        address: method === "delivery" ? address : "",
+        phone,
+        email,
+        ...updates,
+      },
+    });
+  };
 
   const handleDateChange = (event) => {
     setDate(event.target.value);
     setTime("");
+    updateCheckout({
+      checkoutId,
+      delivery: {
+        ...(getCheckout()?.delivery || {}),
+        method,
+        date: event.target.value,
+        time: "",
+        address: method === "delivery" ? address : "",
+        phone,
+        email,
+      },
+    });
   };
 
   const handleContinue = () => {
@@ -163,6 +237,11 @@ function DeliveryPage() {
       phoneDigits.length > 15
     ) {
       alert("Please enter a valid phone number for your order.");
+      return;
+    }
+
+    if (!isEmailVerified) {
+      alert("Please verify your email address before continuing.");
       return;
     }
 
@@ -191,18 +270,21 @@ function DeliveryPage() {
       return;
     }
 
-    if (method === "delivery" && !address.trim()) {
-      alert("Please enter your delivery address.");
+    if (method === "delivery" && address.trim().length < 30) {
+      alert("Please enter a delivery address with at least 30 characters.");
       return;
     }
 
     updateCheckout({
+      checkoutId,
+      emailVerification,
       delivery: {
         method,
         date,
         time,
         address: method === "delivery" ? address : "",
         phone: normalizedPhone,
+        email: normalizedEmail,
       },
     });
 
@@ -256,7 +338,10 @@ function DeliveryPage() {
             id="order-phone"
             type="tel"
             value={phone}
-            onChange={(event) => setPhone(event.target.value)}
+            onChange={(event) => {
+              setPhone(event.target.value);
+              persistDelivery({ phone: event.target.value });
+            }}
             autoComplete="tel"
             placeholder="Enter your phone number"
             className="mt-3 w-full rounded-lg border border-[var(--border)] bg-white px-3 py-3 text-sm outline-none focus:border-[var(--brand)]"
@@ -267,11 +352,50 @@ function DeliveryPage() {
           </p>
         </div>
 
+        <EmailOtpVerification
+          className="mt-5"
+          email={email}
+          checkoutId={checkoutId}
+          verification={emailVerification}
+          requestPending={otpRequested}
+          resendAvailableAt={resendAvailableAt}
+          onEmailChange={(value) => {
+            setEmail(value);
+            setEmailVerification(null);
+            persistDelivery({ email: value });
+            updateCheckout({ emailVerification: null, emailOtpRequested: false, emailOtpResendAt: null });
+          }}
+          onVerificationInvalidated={() => {
+            setEmailVerification(null);
+            updateCheckout({ emailVerification: null });
+          }}
+          onVerified={(value) => {
+            setEmailVerification(value);
+            updateCheckout({
+              checkoutId,
+              emailVerification: value,
+              customerEmail: value.email,
+              delivery: { ...(getCheckout()?.delivery || {}), email: value.email },
+            });
+          }}
+          onRequestPendingChange={(value) => {
+            setOtpRequested(value);
+            updateCheckout({ emailOtpRequested: value });
+          }}
+          onResendAvailableAtChange={(value) => {
+            setResendAvailableAt(value);
+            updateCheckout({ emailOtpResendAt: value });
+          }}
+        />
+
         {/* Delivery / Pickup */}
         <div className="mt-6 grid grid-cols-2 gap-3">
           <button
             type="button"
-            onClick={() => setMethod("delivery")}
+            onClick={() => {
+              setMethod("delivery");
+              persistDelivery({ method: "delivery" });
+            }}
             className={`rounded-xl border p-4 text-left ${
               method === "delivery"
                 ? "border-[var(--brand)] bg-[var(--brand-light)]"
@@ -293,7 +417,10 @@ function DeliveryPage() {
 
           <button
             type="button"
-            onClick={() => setMethod("pickup")}
+            onClick={() => {
+              setMethod("pickup");
+              persistDelivery({ method: "pickup" });
+            }}
             className={`rounded-xl border p-4 text-left ${
               method === "pickup"
                 ? "border-[var(--brand)] bg-[var(--brand-light)]"
@@ -345,7 +472,10 @@ function DeliveryPage() {
           <select
             id="delivery-time"
             value={time}
-            onChange={(event) => setTime(event.target.value)}
+            onChange={(event) => {
+              setTime(event.target.value);
+              persistDelivery({ time: event.target.value });
+            }}
             disabled={!date || timeSlots.length === 0}
             className="mt-3 w-full rounded-lg border border-[var(--border)] bg-white px-3 py-3 text-sm disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
           >
@@ -370,30 +500,41 @@ function DeliveryPage() {
         </div>
 
         {/* Delivery address */}
-        {method === "delivery" && (
-          <div className="mt-5">
-            <label
-              htmlFor="delivery-address"
-              className="flex items-center gap-2 text-sm font-semibold"
-            >
-              <MapPin
-                size={16}
-                className="text-[var(--brand)]"
-              />
+{method === "delivery" && (
+  <div className="mt-5">
+    <label
+      htmlFor="delivery-address"
+      className="flex items-center gap-2 text-sm font-semibold"
+    >
+      <MapPin
+        size={16}
+        className="text-[var(--brand)]"
+      />
+      Delivery Address
+    </label>
 
-              Delivery Address
-            </label>
+    <textarea
+      id="delivery-address"
+      value={address}
+      onChange={(event) => {
+        setAddress(event.target.value);
+        persistDelivery({ address: event.target.value });
+      }}
+      rows={4}
+      minLength={30}
+      required
+      placeholder="Enter your complete delivery address"
+      className="mt-3 w-full resize-none rounded-lg border border-[var(--border)] bg-white px-3 py-3 text-sm"
+    />
 
-            <textarea
-              id="delivery-address"
-              value={address}
-              onChange={(event) => setAddress(event.target.value)}
-              rows={4}
-              placeholder="Enter your complete delivery address"
-              className="mt-3 w-full resize-none rounded-lg border border-[var(--border)] bg-white px-3 py-3 text-sm"
-            />
-          </div>
-        )}
+    {address.trim().length < 30 && (
+      <p className="mt-1 text-xs text-red-500">
+        Please enter at least 30 characters.
+        ({address.trim().length}/30)
+      </p>
+    )}
+  </div>
+)}
 
         {/* Pickup information */}
         {method === "pickup" && (
@@ -460,7 +601,8 @@ function DeliveryPage() {
         <button
           type="button"
           onClick={handleContinue}
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--brand)] px-5 py-3.5 text-sm font-semibold text-white hover:bg-[var(--brand-dark)]"
+          disabled={!isEmailVerified}
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--brand)] px-5 py-3.5 text-sm font-semibold text-white hover:bg-[var(--brand-dark)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           Continue · {formatINR(total)}
           <ArrowRight size={17} />

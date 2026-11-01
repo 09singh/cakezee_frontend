@@ -13,6 +13,7 @@ import { createCheckoutId, updateCheckout } from "../../../utils/checkoutStorage
 import { getProductById as getStaticProductById } from "../../../data/product/products";
 import { getProductById, getProductBySlug } from "../../../api/auth.api";
 import { addToCart } from "../../../data/cart";
+import { calculateProductPrice } from "../../../utils/productPricing";
 
 function ProductPage() {
   const { id } = useParams();
@@ -72,6 +73,7 @@ function ProductPage() {
           category: item.categoryId?.slug || item.categoryId?.name || "",
           description: item.description || "",
           baseWeight: Number(item.pricing?.baseWeight) || 0.5,
+          collection: item.pricing?.collection || "standard",
           inventoryQuantity: Number(item.inventoryQuantity) || 0,
           productType: item.productType || "regular",
           readyNowCategory: item.readyNowCategory || "",
@@ -130,9 +132,11 @@ function ProductPage() {
     product.flavours[0];
 
   // Calculate cake price
-  const price =
-    selectedFlavour.basePrice *
-    (selectedSize.weight / (product.baseWeight || 0.5));
+  const price = calculateProductPrice(
+    { pricing: { collection: product.collection, baseWeight: product.baseWeight } },
+    selectedSize.weight,
+    selectedFlavour
+  );
   // Regular cakes are prepared to order, so inventory should not block
   // customisation or adding them to the cart. Ready Now items use stock.
   const isOutOfStock = product.productType === "ready_now"
